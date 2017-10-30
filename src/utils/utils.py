@@ -4,7 +4,6 @@ from scipy import stats
 from sklearn.decomposition import PCA
 from sklearn.cluster import MiniBatchKMeans 
 from sklearn import preprocessing 
-
 from constants import *
 
 def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
@@ -76,7 +75,7 @@ def correct_data(df):
 def separate_X_mu_y(df, cols=None):
     mu = df[INTERVENTIONS]
     # TODO: fix the error here
-    mu['action_bin'], tev_bin_edges, vaso_bin_edges  = discretize_actions(mu['input_4hourly_tev'], mu['median_dose_vaso'])
+    mu['action'], tev_bin_edges, vaso_bin_edges  = discretize_actions(mu['input_4hourly_tev'], mu['median_dose_vaso'])
     y = df[OUTCOMES]
     if cols is None:
         default_cols = set(ALL_VALUES) - set(OUTCOMES)
@@ -95,15 +94,14 @@ def apply_pca(X):
     X_pca = pd.DataFrame(X_pca, columns=list('AB'))
     return X_pca
 
-def clustering(X, k=2000, batch_size=100):
+def clustering(X, k=2000, batch_size=100, cols_to_exclude=[]):
     # pick only numerical columns that make sense
-    COLS_TO_DROP = ['icustayid', 'charttime', 'bloc', 're_admission', 'gender', 'age']
-    X = X.drop(COLS_TO_DROP, axis=1)
+    X = X.drop(cols_to_exclude, axis=1)
     mbk = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, init_size=k*3)
     mbk.fit(X)
-    mbk_means_labels_unique = np.unique(mbk.labels_)
+    X_centroids = mbk.cluster_centers_
     X_clustered = mbk.predict(X)
-    return X_clustered
+    return X_centroids, X_clustered
 
 def discretize_actions(
         input_4hourly__sequence__continuous,

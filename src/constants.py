@@ -3,7 +3,10 @@ import numpy as np
 
 DATA_PATH = 'data/'
 FILEPATH = DATA_PATH + 'sepsis.csv'
+TRAIN_FILEPATH = DATA_PATH + 'sepsis.csv'
+TEST_FILEPATH = DATA_PATH + 'sepsis.csv'
 CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
+CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
 TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories.npy'
 TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
 REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table.npy'
@@ -61,6 +64,7 @@ ALREADY_NORMAL_LOGGED = list(set(COLS_TO_BE_NORMALIZED) - set(COLS_TO_BE_LOGGED)
 
 INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state_cluster']
 
+COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc', 're_admission', 'gender', 'age']
 
 # plotting
 palette = sns.color_palette("muted", 70)
