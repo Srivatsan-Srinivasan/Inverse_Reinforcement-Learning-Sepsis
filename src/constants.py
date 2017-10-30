@@ -36,8 +36,7 @@ EXT_MEASUREMENTS = ['Weight_kg', 'HR', 'SysBP', 'MeanBP', 'DiaBP', 'RR', 'SpO2',
 PSEUDO_OBSERVATIONS = ['sedation', 'mechvent', 'rrt']
 INTERVENTIONS = ['input_total_tev','input_4hourly_tev','median_dose_vaso' ,'max_dose_vaso']
 
-TRUE_INTERVENTIONS = ['median_dose_vaso', 'max_dose_vaso', 'input_total_tev', 'input_4hourly_tev',
-        'cumulated_balance_tev', 'sedation', 'mechvent', 'rrt']
+TRUE_INTERVENTIONS = ['median_dose_vaso', 'max_dose_vaso', 'input_total_tev', 'input_4hourly_tev', 'cumulated_balance_tev', 'sedation', 'mechvent', 'rrt']
 
 # shock_index is a ratio 
 SUMMARY_INDEX = ['elixhauser', 'SOFA', 'SIRS', 'GCS', 'Shock_Index']
@@ -64,8 +63,9 @@ ALREADY_NORMAL_LOGGED = list(set(COLS_TO_BE_NORMALIZED) - set(COLS_TO_BE_LOGGED)
 
 INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state_cluster']
 
-COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc', 're_admission', 'gender', 'age']
-
+# gender, age, readmission, rrt, vent, sedation could be excluded
+COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc']
+BINARY_COLS = ['gender', 're_admission', 'rrt', 'mechvent', 'sedation']
 # plotting
 palette = sns.color_palette("muted", 70)
 

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -24,7 +25,27 @@ def compute_V_hat(Q):
         V_hat[s] = np.max(Q[s, :])
     return V_hat
 
-def load_data(path):
+def load_data():
+    # TODO: accept filepath to get train/test/vali
+    if os.path.isfile(CLEANSED_DATA_FILEPATH):
+        df = _load_data(FILEPATH)
+        df_cleansed = _load_data(CLEANSED_DATA_FILEPATH)
+        df_centroids = _load_data(CENTROIDS_DATA_FILEPATH)
+    else:
+        df = _load_data(FILEPATH)
+        df_corrected = correct_data(df)
+        df_norm = normalize_data(df_corrected)
+        X, mu, y = separate_X_mu_y(df_norm, ALL_VALUES)
+        X_centroids, X_clustered = clustering(X, k=num_states, batch_size=500, cols_to_exclude=COLS_NOT_FOR_CLUSTERING)
+        X['state'] = pd.Series(X_clustered)
+        df_cleansed = pd.concat([X, mu, y], axis=1)
+        df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
+        df_centroids = pd.DataFrame(X_centroids)
+        df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
+
+    return df, df_cleansed, df_centroids
+
+def _load_data(path):
     df = pd.read_csv(path)
     cols = df.columns
     valid_cols = list(set(INTEGER_COLS) & set(cols))
