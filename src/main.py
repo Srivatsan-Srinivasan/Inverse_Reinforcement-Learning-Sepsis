@@ -1,7 +1,7 @@
 from mdp.builder import make_mdp
 from mdp.solver import solve_mdp
-from policy.policy import get_physician_policy
-from utils.utils import load_data
+from policy.policy import GreedyPolicy
+from utils.utils import load_data, get_physician_policy
 from irl.irl import *
 
 # let us think about what we need purely
@@ -17,40 +17,40 @@ todo
     - add load and save state centroids
     - find binary cols
 - get the mvp irl workflow done
+    - implement estimate feature expectation
+    - implement naive phi
+    - implement reward function
+    - implement state value estimation function
+- get expert pi_e
 - test if the mdp solver work
 - make mdp more efficienct (using outside code)
 '''
 
-
 if __name__ == '__main__':
-    # there will be 752 states in total
-    # plus 2 bc. terminal states(survive vs. died in hosp)
-    NUM_STATES = 750
-    NUM_ACTIONS = 25
     # loading the whole data
     # TODO: load only train data
     df, df_cleansed, df_centroids = load_data()
-    mdp_result = make_mdp(df_cleansed, NUM_STATES, NUM_ACTIONS)
-    transition_matrix, reward_matrix = mdp_result
-    import pdb;pdb.set_trace()
-    print('let us rock and roll')
-    # find binary cols
-    binary_df = df[BINARY_COLS]
-    # display binary columns
-    gamma = 0.95
-    action_count = 25
-    state_count = 750
-
+    transition_matrix, reward_matrix = make_mdp(df_cleansed, NUM_STATES, NUM_ACTIONS)
+    
+    # arbitrary feature columns to use
+    # they become binary arbitrarily
+    # to check how, see phi() definition
+    feature_columns = ['1','2', '3']
+    
+    # initialize s_0 sampler
+    sample_initial_state = make_initial_state_sampler(df_cleansed)
+    get_state = make_state_centroid_finder(df_centroids, feature_columns)
+    
     # initialize w
-    w = np.zeros((variable_count)) # initialize policy pi
-    pi = np.zeros((state_count))
-    # make some random centroid matrix
-    centroid = np.ones((state_count, df.shape[1]))
+    np.random.seed(1)
+    alphas = np.ones(len(feature_columns))
+    W = np.random.dirichlet(alphas, size=1)[0]
+    
+    # initialize with a Greedy Policy
+    # we can swap for other types of pis later
+    # we may have to index s.t. pi_tilda_i
+    pi_tilda = GreedyPolicy(NUM_STATES + 2, NUM_ACTIONS)
+    mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
+    v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
 
-    R = reward(w, centroid, variables_to_use)
-
-    # sample trajectories
-    m=100
-    sample_trajectories = sampling_trajectories(transition_matrix, pi, m, state_count)
-    mu = feature_expectation(sample_trajectories, gamma)
 

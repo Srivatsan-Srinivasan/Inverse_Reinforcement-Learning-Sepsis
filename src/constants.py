@@ -1,6 +1,15 @@
 import seaborn as sns
 import numpy as np
 
+# there will be 752 states in total
+# plus 2 bc. terminal states(survive vs. died in hosp)
+NUM_STATES = 752
+NUM_ACTIONS = 25
+# terminal states index
+TERMINAL_STATE_ALIVE = NUM_STATES - 2
+TERMINAL_STATE_DEAD = NUM_STATES - 1
+NUM_TERMINAL_STATES = 2
+
 DATA_PATH = 'data/'
 FILEPATH = DATA_PATH + 'sepsis.csv'
 TRAIN_FILEPATH = DATA_PATH + 'sepsis.csv'
@@ -52,7 +61,10 @@ CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 # does it make sense to interprete the mean of these multiplied by some constant? 
 # if yes, it should go here
 # we don't normalize interventions
-COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX
+#COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX 
+# TODO: this does not make sense but will fix later
+# when we do clustering other than kmeans
+COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission']
 ETC = ['age', 'charttime']
 
 COLS_TO_BE_LOGGED=  ['SpO2','Glucose','BUN','Creatinine', 'SGOT', 'SGPT','Total_bili','WBC_count',
@@ -66,6 +78,7 @@ INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state_cluster']
 # gender, age, readmission, rrt, vent, sedation could be excluded
 COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc']
 BINARY_COLS = ['gender', 're_admission', 'rrt', 'mechvent', 'sedation']
+
 # plotting
 palette = sns.color_palette("muted", 70)
 

@@ -1,64 +1,78 @@
 import numpy as np
 import pandas as np
+import itertools
 from constants import *
+from utils.utils import is_terminal_state
 
-# columns that are binary:
-def find_binary_columns():
-    df = load_data(FILEPATH)
-    variables_to_use = []
-    for i in range(df.shape[1]):
-        if len(df.iloc[:,i].unique())==2:
-            variables_to_use.append(i)
-    #exclude last two columns: died_in_hosp and mortality_90d
-    variables_to_use = variables_to_use[:-2]
-    return variables_to_use
-
-
-# state basis function
-def phi(centroid, state, variables_to_use):
-    phi_st = centroid[state, variables_to_use]
-    return phi_st
+def make_initial_state_sampler(df):
+    '''
+    we only care about empirically observed initial states.
+    '''
+    initial_states = np.sort(df[df['bloc'] == 1]['state'].unique())
+    def f():
+        return np.random.choice(initial_states)
+    return f
 
 
-# sampling heuristic trajectories
-def sampling_trajectories(transition_matrix, policy, m, state_count):
-    absorption_states = [state_count, state_count+1, state_count+2]
-    
-    keys = range(m)
-    sample_trajectories = dict.fromkeys(keys, None)
-    
-    for i in keys:
-        sample_trajectories[i] = []
-        #start from a random state
-        state = int(np.random.choice(range(state_count)))
-        sample_trajectories[i].append(state)
-        while state not in absorption_states:
-            action = int(policy[state])
-            probs = transition_matrix[state,action,:]
-            next_state = int(np.random.choice(np.arange(state_count+len(absorption_states)), p=probs))
-            sample_trajectories[i].append(next_state)
-            state = np.copy(next_state)
-    return sample_trajectories
+def make_state_centroid_finder(df, columns=None):
+    if columns is not None:
+        df = df[columns]
+    def f(state):
+        return df.iloc[state]
+    return f
 
-    
-# function to calculate mu
-def feature_expectation(sample_trajectories, gamma):
-    mu = np.zeros((variable_count))
-    
-    # loop over all trajectories
-    for i in range(m):
-        trajectory = sample_trajectories[i]
-        # loop over all states in that trajectory
-        t = 0
-        for state in trajectory:
-            phi_st = phi(centroid, state, variables_to_use)
-            mu += gamma**t*phi_st
-            t+=1
-    mu = 1/float(m)*mu    
+
+def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi, gamma=0.99, num_trajectories=100):
+    # TODO: get_state is ugly. fix this
+    s = sample_initial_state()
+    s_cent = get_state(s)
+    mu = np.zeros(phi(s_cent).shape)
+
+    for i in range(num_trajectories):
+        s = sample_initial_state()
+        s_cent = get_state(s)
+        for t in itertools.count():
+            # accumulate phi(s) over trajectories
+            mu += gamma**t * phi(s)
+            # sample next action
+            probs = pi.query_Q_probs(s)
+            chosen_a = np.random.choice(np.arange(len(probs)), p=probs)
+            # sample next state
+            # need to renomralize so sum(probs) < 1
+            probs = transition_matrix[s, chosen_a, :]
+            probs /= np.sum(probs) 
+            new_s = np.random.choice(np.arange(len(probs)), p=probs)
+            
+            if is_terminal_state(new_s):
+                # there's no phi(terminal_state)
+                break
+            s = new_s
+            s_cent = get_state(new_s)
+      
+    mu = (1.0 * mu) / num_trajectories
     return mu
 
 
-def reward(w, centroid, variables_to_use):
-    R = w*centroid[:, variables_to_use]
-    return R
+def dummy_phi(states):
+    return states
+
+
+def phi(state):
+    '''
+    state: centroid values whose dimension is {num_features}
+    phi: must apply decision rule (=indicator function)
+
+    returs: binary matrix of R^{num_features}
+    '''
+    # TODO: implement this
+    return np.uint8(state > 0)
+
+
+def estimate_v_pi(W, mu):
+    return np.dot(W, mu)
+
+
+def compute_reward(W, state):
+    return np.dot(W, phi(state))
+
 

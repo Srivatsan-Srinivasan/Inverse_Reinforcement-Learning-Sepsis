@@ -30,9 +30,7 @@ def make_mdp(df_cleansed, num_states, num_actions):
 
 
 def _make_mdp(trajectories, num_states, num_actions):
-    # TODO: fix this hard coding
-    num_terminal_states = 2
-    transition_matrix = np.zeros((num_states + num_terminal_states, num_actions, num_states + num_terminal_states))
+    transition_matrix = np.zeros((num_states, num_actions, num_states))
     reward_matrix = np.zeros((num_states + num_terminal_states, num_actions))
     # stochastic world: 1% of uncertainty in transition
     eps = 1e-2
@@ -85,18 +83,20 @@ def _make_mdp(trajectories, num_states, num_actions):
 
     
 def _extract_trajectories(df, num_states):
-    # patient id, s, a, r, new_s
+    '''
+    a few strong assumptions are made here.
+    1. we consider those who died in 90 days but not in hopsital to have the same status as alive. hence we give reward of one. Worry not. we can change back. this assumption was to be made to account for uncertainty in the cause of dealth after leaving the hospital
+    '''
     cols = ['icustayid', 's', 'a', 'r', 'new_s']
     df = df.sort_values(['icustayid', 'bloc'])
     groups = df.groupby('icustayid')
-    DEFAULT_REWARD = 0
     trajectories = pd.DataFrame(np.zeros((df.shape[0], len(cols))), columns=cols)
     trajectories.loc[:, 'icustayid'] = df['icustayid']
     trajectories.loc[:, 's'] = df['state']
     trajectories.loc[:, 'a'] = df['action']
 
-    # TODO: fix so that the terminal state does not get reward
     # reward function
+    DEFAULT_REWARD = 0
     trajectories.loc[:, 'r'] = DEFAULT_REWARD
     terminal_steps = groups.tail(1).index
     is_terminal = df.isin(df.iloc[terminal_steps, :]).iloc[:, 0]
@@ -105,7 +105,6 @@ def _extract_trajectories(df, num_states):
     # reward for those who survived (order matters)
     trajectories.loc[is_terminal, 'r'] = 1
     trajectories.loc[is_terminal & died_in_hosp, 'r'] = -1
-    #trajectories.loc[is_terminal & died_in_90d, 'r']  = -1
 
     # TODO: vectorize this
     new_s = pd.Series([])
@@ -113,16 +112,14 @@ def _extract_trajectories(df, num_states):
         # add three imaginary states
         # to simplify, we use died_in_hosp_only
         if np.any(g['died_in_hosp'] == 1):
-            terminal_marker = num_states
-        #elif np.any(g['mortality_90d'] == 1):
-        #    terminal_marker = num_states + 1
+            terminal_marker = TERMINAL_STATE_DEAD
         else:
             # survived
-            terminal_marker = num_states + 1
+            terminal_marker = TERMINAL_STATE_ALIVE
         new_s_sequence = g['state'].shift(-1)
         new_s_sequence.iloc[-1] = terminal_marker
         new_s = pd.concat([new_s, new_s_sequence])
     trajectories.loc[:, 'new_s'] = new_s.astype(np.int)
-    # return as numpy 2d array
+
     return trajectories.as_matrix()
     
