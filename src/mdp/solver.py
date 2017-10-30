@@ -1,4 +1,5 @@
 import numpy as np
+# we need an efficient mdp solver
 
 def iterate_value(Q_table, transition_matrix, reward_table, gamma=0.95, theta=0.1):
     num_states = Q_table.shape[0]
@@ -162,4 +163,10 @@ def iterate_policy(Q_table, transition_matrix, reward_table, gamma=0.95, theta=1
             break
     return Q_table
 
-   
+
+def solve_mdp(transition_matrix, reward_matrix):
+    Q = np.zeros(reward_matrix.shape)
+    Q_star = iterate_policy(Q, transition_matrix, reward_matrix)
+    return Q_star
+    
+

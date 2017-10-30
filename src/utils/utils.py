@@ -5,7 +5,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import MiniBatchKMeans 
 from sklearn import preprocessing 
 
-from data_hw2.constants import *
+from constants import *
 
 def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     check1 = (set(numerical_cols) - set(all_cols))
