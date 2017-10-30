@@ -1,7 +1,6 @@
 # CS282-Final-Project
 This repository will be used to share all documents related to CS282 RL in Healthcare Final Project.
 
-## random ideas on the plate
-- keeping learned policy close to the clinician's policy
-- estimate the reward function of clinicians to supervise the policy search (i.e. use the estimated reward to decide whether to give permission for taking rare actions)
-- generative model of trajectories (aritificial trajectories)
+## getting data
+We assume you populated `src/data/` folder. Since the data we're deadling with should be used with caution, we git-ignore the data. We can easily share the files over some other secure protocol.
+
