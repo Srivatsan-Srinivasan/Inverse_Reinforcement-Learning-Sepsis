@@ -63,6 +63,7 @@ class EpsilonGreedyPolicy:
 class GreedyPolicy:
     def __init__(self, num_states, num_actions, Q=None):
         if Q is None:
+            # start with random policy
             self._Q = np.zeros((num_states, num_actions))
         else:
             # in case we want to import e-greedy
@@ -130,14 +131,4 @@ class RandomPolicy:
         # do nothing...
         pass
 
-def get_physician_policy(states_sequence, actions_sequence, state_count, action_count):
-    # S x A count table
-    sa_count_table = np.zeros((state_count, action_count))
-    physician_policy = np.zeros((state_count))
-    for state in range(state_count):
-        ind = np.where(states_sequence == state)[0]
-        for action in range(action_count):
-            sa_count_table[state, action] += sum(actions_sequence[ind] == action)
-        physician_policy[state] = np.argmax(sa_count_table[state,:])
-    # when tie, smallest index returned
-    return physician_policy
+

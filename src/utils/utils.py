@@ -17,14 +17,6 @@ def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     return (check1 | check2 | check3) == set(ETC)
 
 
-def compute_V_hat(Q):
-    # this is V_hat because Q was computed with off-policy
-    num_states = Q.shape[0]
-    V_hat = np.zeros(num_states)
-    for s in range(num_states):
-        V_hat[s] = np.max(Q[s, :])
-    return V_hat
-
 def load_data():
     # TODO: accept filepath to get train/test/vali
     if os.path.isfile(CLEANSED_DATA_FILEPATH):
@@ -40,7 +32,7 @@ def load_data():
         X['state'] = pd.Series(X_clustered)
         df_cleansed = pd.concat([X, mu, y], axis=1)
         df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
-        df_centroids = pd.DataFrame(X_centroids)
+        df_centroids = pd.DataFrame(X_centroids, columns=df_cleansed.columns)
         df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
 
     return df, df_cleansed, df_centroids
@@ -61,13 +53,6 @@ def normalize_data(df):
     return df
 
 
-def encode_data(df):
-    label_encoder = preprocessing.LabelEncoder()
-    # nominal categorical data were already one hot encoded...
-    #onehot_encoder = preprocessing.OneHotEncoder()
-    #onehot_encoder.fit(df[CATEGORICAL_NOMINAL])
-    #encoded = onehot_encoder.transform(df[CATEGORICAL_NOMINAL])
-    
 
 def correct_data(df):
     # the logic is hard-coded. could be fixed...
@@ -171,3 +156,20 @@ def discretize_actions(
     return actions_sequence, \
         input_4hourly__conversion_from_binned_to_continuous, \
         median_dose_vaso__conversion_from_binned_to_continuous
+
+
+def get_physician_policy(states_sequence, actions_sequence, state_count, action_count):
+    # S x A count table
+    sa_count_table = np.zeros((state_count, action_count))
+    physician_policy = np.zeros((state_count))
+    for state in range(state_count):
+        ind = np.where(states_sequence == state)[0]
+        for action in range(action_count):
+            sa_count_table[state, action] += sum(actions_sequence[ind] == action)
+        physician_policy[state] = np.argmax(sa_count_table[state,:])
+    # when tie, smallest index returned
+    return physician_policy
+
+
+def is_terminal_state(s):
+    return s >= (NUM_STATES - NUM_TERMINAL_STATES)
