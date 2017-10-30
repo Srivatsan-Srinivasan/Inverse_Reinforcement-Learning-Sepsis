@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as np
-
+from constants import *
 
 # columns that are binary:
-def find_binary_columns(df):
+def find_binary_columns():
+    df = load_data(FILEPATH)
     variables_to_use = []
     for i in range(df.shape[1]):
         if len(df.iloc[:,i].unique())==2:

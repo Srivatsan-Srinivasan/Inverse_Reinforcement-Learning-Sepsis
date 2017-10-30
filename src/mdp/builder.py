@@ -2,27 +2,35 @@ import numpy as np
 import pandas as pd
 import os
 from constants import *
-from utils.utils import load_data
+from utils.utils import *
 
-def make_mdp(num_states, num_actions):
-    # build mdp
+def make_mdp(num_states, num_actions, is_train=True):
+    '''
+    build states by running k-means clustering
+    Note: we exclude nominal categorical columns from clustering.
+    the columns to be excluded are:
+    COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc', 're_admission', 'gender', 'age']
+    '''
     if os.path.isfile(CLEANSED_DATA_FILEPATH):
         df_cleansed = load_data(CLEANSED_DATA_FILEPATH)
+        df_centroids = load_data(CENTROIDS_DATA_FILEPATH)
     else:
         df = load_data(FILEPATH)
         df_corrected = correct_data(df)
         df_norm = normalize_data(df_corrected)
         X, mu, y = separate_X_mu_y(df_norm, ALL_VALUES)
-        X_clustered = clustering(X, k=num_states, batch_size=100)
-        X['state_cluster'] = pd.Series(X_clustered)
+        X_centroids, X_clustered = clustering(X, k=num_states, batch_size=500, cols_to_exclude=COLS_NOT_FOR_CLUSTERING)
+        X['state'] = pd.Series(X_clustered)
         df_cleansed = pd.concat([X, mu, y], axis=1)
         df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
+        df_centroids = pd.DataFrame(X_centroids)
+        df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
 
     if os.path.isfile(TRAJECTORIES_FILEPATH):
         trajectories = np.load(TRAJECTORIES_FILEPATH)
     else:
         print('extract trajectories')
-        trajectories = _extract_trajectories(df_cleansed, num_states)
+        trajectories, num_states_plus = _extract_trajectories(df_cleansed, num_states)
         np.save(TRAJECTORIES_FILEPATH, trajectories)
     
     if os.path.isfile(TRANSITION_MATRIX_FILEPATH) and \
@@ -31,10 +39,10 @@ def make_mdp(num_states, num_actions):
         reward_matrix = np.load(REWARD_MATRIX_FILEPATH)
     else:
         print('making mdp')
-        transition_matrix, reward_matrix = _make_mdp(trajectories, num_states, num_actions)
+        transition_matrix, reward_matrix = _make_mdp(trajectories, num_states_plus, num_actions)
         np.save(TRANSITION_MATRIX_FILEPATH, transition_matrix)
         np.save(REWARD_MATRIX_FILEPATH, reward_matrix)
-    return df_cleansed, transition_matrix, reward_matrix
+    return df_cleansed, df_centroids, transition_matrix, reward_matrix
 
 
 def _make_mdp(trajectories, num_states, num_actions):
@@ -42,7 +50,11 @@ def _make_mdp(trajectories, num_states, num_actions):
     num_terminal_states = 3
     transition_matrix = np.zeros((num_states + num_terminal_states, num_actions, num_states + num_terminal_states))
     reward_matrix = np.zeros((num_states + num_terminal_states, num_actions))
-    TRANSITION_PROB_UNVISITED_SAS = 0.0
+    # stochastic world: 1% of uncertainty in transition
+    eps = 1e-2
+    TRANSITION_PROB_UNVISITED_SAS = eps / num_states
+    # if (s, a) never observed, we naively assume uniform transition
+    TRANSITION_PROB_UNVISITED_SA = 1.0 / num_states
     REWARD_UNVISITED_SA = 0.0
 
     # create dataframe for easy tallying
@@ -62,13 +74,15 @@ def _make_mdp(trajectories, num_states, num_actions):
     print('this is a loop of length', num_states**2 * num_actions)
     for s in range(num_states):
         for a in range(num_actions):
-            # handle reward
+            # store empirical reward
             if (s, a) in avg_reward_sa:
                 reward_matrix[s, a] = avg_reward_sa[(s, a)]
             else:
                 reward_matrix[s, a] = REWARD_UNVISITED_SA
-            # handle transitions
+            # store empirical transitions
             if (s, a) in transition_count_sa:
+                # give small trans. prob to every next state
+                transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SAS
                 num_sa = transition_count_sa[(s, a)]
                 for new_s in range(num_states):
                     i+=1
@@ -76,11 +90,10 @@ def _make_mdp(trajectories, num_states, num_actions):
                         print('i am doing fine, progress:', s, a, new_s)
                     if (s, a, new_s) in transition_count_sas:
                         num_sas = transition_count_sas[(s, a, new_s)]
-                        transition_matrix[s, a, new_s] = num_sas / num_sa
-                    else:
-                        transition_matrix[s, a, new_s] = TRANSITION_PROB_UNVISITED_SAS
+                        transition_matrix[s, a, new_s] += (1 - eps)*num_sas / num_sa
             else:
-                transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SAS
+                # if (s, a) never observed, we naively assume uniform transition
+                transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SA
 
     return transition_matrix, reward_matrix
 
@@ -93,8 +106,8 @@ def _extract_trajectories(df, num_states):
     DEFAULT_REWARD = 0
     trajectories = pd.DataFrame(np.zeros((df.shape[0], len(cols))), columns=cols)
     trajectories.loc[:, 'icustayid'] = df['icustayid']
-    trajectories.loc[:, 's'] = df['state_cluster']
-    trajectories.loc[:, 'a'] = df['action_bin']
+    trajectories.loc[:, 's'] = df['state']
+    trajectories.loc[:, 'a'] = df['action']
 
     # TODO: fix so that the terminal state does not get reward
     # reward function
@@ -104,28 +117,26 @@ def _extract_trajectories(df, num_states):
     died_in_hosp = df[OUTCOMES[0]] == 1
     died_in_90d = df[OUTCOMES[1]] == 1
     # reward for those who survived (order matters)
-    trajectories.loc[is_terminal, 'r'] = 20
-    trajectories.loc[is_terminal & died_in_hosp, 'r'] = -20
-    trajectories.loc[is_terminal & died_in_90d, 'r']  = -10
-    #trajectories.loc[terminal_steps, 'r'] = modify_reward(df.loc[terminal_steps, OUTCOMES])
+    trajectories.loc[is_terminal, 'r'] = 1
+    trajectories.loc[is_terminal & died_in_hosp, 'r'] = -1
+    #trajectories.loc[is_terminal & died_in_90d, 'r']  = -1
 
     # TODO: vectorize this
     new_s = pd.Series([])
     for name, g in groups:
-        # TODO: fix the last terminal step
-        new_s_sequence = g['state_cluster'].shift(-1)
-        # use of the same terminal_marker does not make sense
-        # as different patients exit mdp with varying conditions
+        # add three imaginary states
+        # to simplify, we use died_in_hosp_only
         if np.any(g['died_in_hosp'] == 1):
             terminal_marker = num_states
-        elif np.any(g['mortality_90d'] == 1):
-            terminal_marker = num_states + 1
+        #elif np.any(g['mortality_90d'] == 1):
+        #    terminal_marker = num_states + 1
         else:
             # survived
-            terminal_marker = num_states + 2
+            terminal_marker = num_states + 1
+        new_s_sequence = g['state'].shift(-1)
         new_s_sequence.iloc[-1] = terminal_marker
         new_s = pd.concat([new_s, new_s_sequence])
     trajectories.loc[:, 'new_s'] = new_s.astype(np.int)
     # return as numpy 2d array
-    return trajectories.as_matrix()
+    return trajectories.as_matrix(), (num_states + 2)
     
