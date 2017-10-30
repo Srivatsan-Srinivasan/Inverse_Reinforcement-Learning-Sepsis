@@ -19,6 +19,7 @@ def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
 
 def load_data():
     # TODO: accept filepath to get train/test/vali
+    num_states = NUM_STATES - NUM_TERMINAL_STATES
     if os.path.isfile(CLEANSED_DATA_FILEPATH):
         df = _load_data(FILEPATH)
         df_cleansed = _load_data(CLEANSED_DATA_FILEPATH)
@@ -28,11 +29,13 @@ def load_data():
         df_corrected = correct_data(df)
         df_norm = normalize_data(df_corrected)
         X, mu, y = separate_X_mu_y(df_norm, ALL_VALUES)
-        X_centroids, X_clustered = clustering(X, k=num_states, batch_size=500, cols_to_exclude=COLS_NOT_FOR_CLUSTERING)
+        X_to_cluster = X.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        X_centroids, X_clustered = clustering(X_to_cluster, k=num_states, batch_size=500)
         X['state'] = pd.Series(X_clustered)
         df_cleansed = pd.concat([X, mu, y], axis=1)
+        df_centroids = pd.DataFrame(X_centroids, columns=X_to_cluster.columns)
+        
         df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
-        df_centroids = pd.DataFrame(X_centroids, columns=df_cleansed.columns)
         df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
 
     return df, df_cleansed, df_centroids
@@ -45,13 +48,64 @@ def _load_data(path):
     return df
 
 
+def extract_trajectories(df, num_states):
+    if os.path.isfile(TRAJECTORIES_FILEPATH):
+        trajectories = np.load(TRAJECTORIES_FILEPATH)
+    else:
+        print('extract trajectories')
+        trajectories = _extract_trajectories(df, num_states)
+        np.save(TRAJECTORIES_FILEPATH, trajectories)
+    return trajectories
+
+
+def _extract_trajectories(df, num_states):
+    '''
+    a few strong assumptions are made here.
+    1. we consider those who died in 90 days but not in hopsital to have the same status as alive. hence we give reward of one. Worry not. we can change back. this assumption was to be made to account for uncertainty in the cause of dealth after leaving the hospital
+    '''
+    cols = ['icustayid', 's', 'a', 'r', 'new_s']
+    df = df.sort_values(['icustayid', 'bloc'])
+    groups = df.groupby('icustayid')
+    trajectories = pd.DataFrame(np.zeros((df.shape[0], len(cols))), columns=cols)
+    trajectories.loc[:, 'icustayid'] = df['icustayid']
+    trajectories.loc[:, 's'] = df['state']
+    trajectories.loc[:, 'a'] = df['action']
+
+    # reward function
+    DEFAULT_REWARD = 0
+    trajectories.loc[:, 'r'] = DEFAULT_REWARD
+    terminal_steps = groups.tail(1).index
+    is_terminal = df.isin(df.iloc[terminal_steps, :]).iloc[:, 0]
+    died_in_hosp = df[OUTCOMES[0]] == 1
+    died_in_90d = df[OUTCOMES[1]] == 1
+    # reward for those who survived (order matters)
+    trajectories.loc[is_terminal, 'r'] = 1
+    trajectories.loc[is_terminal & died_in_hosp, 'r'] = -1
+
+    # TODO: vectorize this
+    new_s = pd.Series([])
+    for name, g in groups:
+        # add three imaginary states
+        # to simplify, we use died_in_hosp_only
+        if np.any(g['died_in_hosp'] == 1):
+            terminal_marker = TERMINAL_STATE_DEAD
+        else:
+            # survived
+            terminal_marker = TERMINAL_STATE_ALIVE
+        new_s_sequence = g['state'].shift(-1)
+        new_s_sequence.iloc[-1] = terminal_marker
+        new_s = pd.concat([new_s, new_s_sequence])
+    trajectories.loc[:, 'new_s'] = new_s.astype(np.int)
+
+    return trajectories.as_matrix()
+   
+
 def normalize_data(df):
     # divide cols: numerical, categorical, text data
     # logarithimic scale 
     df[COLS_TO_BE_NORMALIZED] -= np.mean(df[COLS_TO_BE_NORMALIZED], axis=0)
     df[COLS_TO_BE_NORMALIZED] /= np.std(df[COLS_TO_BE_NORMALIZED], axis=0)
     return df
-
 
 
 def correct_data(df):
@@ -100,14 +154,15 @@ def apply_pca(X):
     X_pca = pd.DataFrame(X_pca, columns=list('AB'))
     return X_pca
 
-def clustering(X, k=2000, batch_size=100, cols_to_exclude=[]):
+
+def clustering(X, k=2000, batch_size=100):
     # pick only numerical columns that make sense
-    X = X.drop(cols_to_exclude, axis=1)
     mbk = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, init_size=k*3)
     mbk.fit(X)
     X_centroids = mbk.cluster_centers_
     X_clustered = mbk.predict(X)
     return X_centroids, X_clustered
+
 
 def discretize_actions(
         input_4hourly__sequence__continuous,
@@ -156,19 +211,6 @@ def discretize_actions(
     return actions_sequence, \
         input_4hourly__conversion_from_binned_to_continuous, \
         median_dose_vaso__conversion_from_binned_to_continuous
-
-
-def get_physician_policy(states_sequence, actions_sequence, state_count, action_count):
-    # S x A count table
-    sa_count_table = np.zeros((state_count, action_count))
-    physician_policy = np.zeros((state_count))
-    for state in range(state_count):
-        ind = np.where(states_sequence == state)[0]
-        for action in range(action_count):
-            sa_count_table[state, action] += sum(actions_sequence[ind] == action)
-        physician_policy[state] = np.argmax(sa_count_table[state,:])
-    # when tie, smallest index returned
-    return physician_policy
 
 
 def is_terminal_state(s):

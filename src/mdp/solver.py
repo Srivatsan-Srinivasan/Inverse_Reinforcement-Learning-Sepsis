@@ -168,5 +168,10 @@ def solve_mdp(transition_matrix, reward_matrix):
     Q = np.zeros(reward_matrix.shape)
     Q_star = iterate_policy(Q, transition_matrix, reward_matrix)
     return Q_star
-    
+
+
+def solve_mdp_r(transition_matrix, reward_matrix, compute_reward, get_state):
+    Q = np.zeros(reward_matrix.shape)
+    Q_star = iterate_policy(Q, transition_matrix, reward_matrix)
+    return Q_star
 
