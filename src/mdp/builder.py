@@ -4,33 +4,17 @@ import os
 from constants import *
 from utils.utils import *
 
-def make_mdp(num_states, num_actions, is_train=True):
+def make_mdp(df_cleansed, num_states, num_actions):
     '''
     build states by running k-means clustering
     Note: we exclude nominal categorical columns from clustering.
-    the columns to be excluded are:
-    COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc', 're_admission', 'gender', 'age']
+    the columns to be excluded are: chartime, icustyaid, bloc
     '''
-    if os.path.isfile(CLEANSED_DATA_FILEPATH):
-        df_cleansed = load_data(CLEANSED_DATA_FILEPATH)
-        df_centroids = load_data(CENTROIDS_DATA_FILEPATH)
-    else:
-        df = load_data(FILEPATH)
-        df_corrected = correct_data(df)
-        df_norm = normalize_data(df_corrected)
-        X, mu, y = separate_X_mu_y(df_norm, ALL_VALUES)
-        X_centroids, X_clustered = clustering(X, k=num_states, batch_size=500, cols_to_exclude=COLS_NOT_FOR_CLUSTERING)
-        X['state'] = pd.Series(X_clustered)
-        df_cleansed = pd.concat([X, mu, y], axis=1)
-        df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
-        df_centroids = pd.DataFrame(X_centroids)
-        df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
-
     if os.path.isfile(TRAJECTORIES_FILEPATH):
         trajectories = np.load(TRAJECTORIES_FILEPATH)
     else:
         print('extract trajectories')
-        trajectories, num_states_plus = _extract_trajectories(df_cleansed, num_states)
+        trajectories = _extract_trajectories(df_cleansed, num_states)
         np.save(TRAJECTORIES_FILEPATH, trajectories)
     
     if os.path.isfile(TRANSITION_MATRIX_FILEPATH) and \
@@ -39,15 +23,15 @@ def make_mdp(num_states, num_actions, is_train=True):
         reward_matrix = np.load(REWARD_MATRIX_FILEPATH)
     else:
         print('making mdp')
-        transition_matrix, reward_matrix = _make_mdp(trajectories, num_states_plus, num_actions)
+        transition_matrix, reward_matrix = _make_mdp(trajectories, num_states, num_actions)
         np.save(TRANSITION_MATRIX_FILEPATH, transition_matrix)
         np.save(REWARD_MATRIX_FILEPATH, reward_matrix)
-    return df_cleansed, df_centroids, transition_matrix, reward_matrix
+    return transition_matrix, reward_matrix
 
 
 def _make_mdp(trajectories, num_states, num_actions):
     # TODO: fix this hard coding
-    num_terminal_states = 3
+    num_terminal_states = 2
     transition_matrix = np.zeros((num_states + num_terminal_states, num_actions, num_states + num_terminal_states))
     reward_matrix = np.zeros((num_states + num_terminal_states, num_actions))
     # stochastic world: 1% of uncertainty in transition
@@ -67,12 +51,14 @@ def _make_mdp(trajectories, num_states, num_actions):
     transition_count_sas = groups_sas.size()
     
     # TODO: vectorize this
-    # but everything is O(1) inside the loop so it's O(n^2m)
-    # TODO: consider mark transition to the imaginary terminal states
-    # to the prob of 1.0. this may be undesirable consequences
     i = 0
     print('this is a loop of length', num_states**2 * num_actions)
     for s in range(num_states):
+        if s == (num_states - 1) or s == (num_states - 2):
+            # TODO: fix this hardcoding
+            # if terminal states, must be absorbing
+            transition_matrix[s, :, s] = 1.0
+            continue
         for a in range(num_actions):
             # store empirical reward
             if (s, a) in avg_reward_sa:
@@ -87,7 +73,7 @@ def _make_mdp(trajectories, num_states, num_actions):
                 for new_s in range(num_states):
                     i+=1
                     if i % 10000 == 0:
-                        print('i am doing fine, progress:', s, a, new_s)
+                        print('patience is a virtue. state: {}'.format(s, a))
                     if (s, a, new_s) in transition_count_sas:
                         num_sas = transition_count_sas[(s, a, new_s)]
                         transition_matrix[s, a, new_s] += (1 - eps)*num_sas / num_sa
@@ -138,5 +124,5 @@ def _extract_trajectories(df, num_states):
         new_s = pd.concat([new_s, new_s_sequence])
     trajectories.loc[:, 'new_s'] = new_s.astype(np.int)
     # return as numpy 2d array
-    return trajectories.as_matrix(), (num_states + 2)
+    return trajectories.as_matrix()
     

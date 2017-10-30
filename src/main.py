@@ -1,6 +1,7 @@
 from mdp.builder import make_mdp
 from mdp.solver import solve_mdp
 from policy.policy import get_physician_policy
+from utils.utils import load_data
 from irl.irl import *
 
 # let us think about what we need purely
@@ -14,7 +15,7 @@ todo
 - make mdp builder work
     - fix transition matrix not summing to one
     - add load and save state centroids
-    - change the order of columns in df 
+    - find binary cols
 - get the mvp irl workflow done
 - test if the mdp solver work
 - make mdp more efficienct (using outside code)
@@ -22,23 +23,23 @@ todo
 
 
 if __name__ == '__main__':
-    # there will be 750 states + 2 terminal states(survive vs. died in hosp)
+    # there will be 752 states in total
+    # plus 2 bc. terminal states(survive vs. died in hosp)
     NUM_STATES = 750
     NUM_ACTIONS = 25
-    mdp = make_mdp(NUM_STATES, NUM_ACTIONS)
-    df, state_centroids, transition_matrix, reward_matrix = mdp 
+    # loading the whole data
+    # TODO: load only train data
+    df, df_cleansed, df_centroids = load_data()
+    mdp_result = make_mdp(df_cleansed, NUM_STATES, NUM_ACTIONS)
+    transition_matrix, reward_matrix = mdp_result
     import pdb;pdb.set_trace()
     print('let us rock and roll')
     # find binary cols
-    variables_to_use = find_binary_columns(df)
+    binary_df = df[BINARY_COLS]
     # display binary columns
-    df.iloc[:5,variables_to_use]
     gamma = 0.95
     action_count = 25
     state_count = 750
-
-    variables_to_use = find_binary_columns(df)
-    variable_count = len(variables_to_use)
 
     # initialize w
     w = np.zeros((variable_count)) # initialize policy pi
