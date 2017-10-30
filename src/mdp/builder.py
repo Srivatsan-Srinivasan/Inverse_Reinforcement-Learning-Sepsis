@@ -4,19 +4,12 @@ import os
 from constants import *
 from utils.utils import *
 
-def make_mdp(df_cleansed, num_states, num_actions):
+def make_mdp(trajectories, num_states, num_actions):
     '''
     build states by running k-means clustering
     Note: we exclude nominal categorical columns from clustering.
     the columns to be excluded are: chartime, icustyaid, bloc
     '''
-    if os.path.isfile(TRAJECTORIES_FILEPATH):
-        trajectories = np.load(TRAJECTORIES_FILEPATH)
-    else:
-        print('extract trajectories')
-        trajectories = _extract_trajectories(df_cleansed, num_states)
-        np.save(TRAJECTORIES_FILEPATH, trajectories)
-    
     if os.path.isfile(TRANSITION_MATRIX_FILEPATH) and \
             os.path.isfile(REWARD_MATRIX_FILEPATH):
         transition_matrix = np.load(TRANSITION_MATRIX_FILEPATH)
@@ -31,7 +24,7 @@ def make_mdp(df_cleansed, num_states, num_actions):
 
 def _make_mdp(trajectories, num_states, num_actions):
     transition_matrix = np.zeros((num_states, num_actions, num_states))
-    reward_matrix = np.zeros((num_states + num_terminal_states, num_actions))
+    reward_matrix = np.zeros((num_states, num_actions))
     # stochastic world: 1% of uncertainty in transition
     eps = 1e-2
     TRANSITION_PROB_UNVISITED_SAS = eps / num_states
@@ -81,45 +74,4 @@ def _make_mdp(trajectories, num_states, num_actions):
 
     return transition_matrix, reward_matrix
 
-    
-def _extract_trajectories(df, num_states):
-    '''
-    a few strong assumptions are made here.
-    1. we consider those who died in 90 days but not in hopsital to have the same status as alive. hence we give reward of one. Worry not. we can change back. this assumption was to be made to account for uncertainty in the cause of dealth after leaving the hospital
-    '''
-    cols = ['icustayid', 's', 'a', 'r', 'new_s']
-    df = df.sort_values(['icustayid', 'bloc'])
-    groups = df.groupby('icustayid')
-    trajectories = pd.DataFrame(np.zeros((df.shape[0], len(cols))), columns=cols)
-    trajectories.loc[:, 'icustayid'] = df['icustayid']
-    trajectories.loc[:, 's'] = df['state']
-    trajectories.loc[:, 'a'] = df['action']
-
-    # reward function
-    DEFAULT_REWARD = 0
-    trajectories.loc[:, 'r'] = DEFAULT_REWARD
-    terminal_steps = groups.tail(1).index
-    is_terminal = df.isin(df.iloc[terminal_steps, :]).iloc[:, 0]
-    died_in_hosp = df[OUTCOMES[0]] == 1
-    died_in_90d = df[OUTCOMES[1]] == 1
-    # reward for those who survived (order matters)
-    trajectories.loc[is_terminal, 'r'] = 1
-    trajectories.loc[is_terminal & died_in_hosp, 'r'] = -1
-
-    # TODO: vectorize this
-    new_s = pd.Series([])
-    for name, g in groups:
-        # add three imaginary states
-        # to simplify, we use died_in_hosp_only
-        if np.any(g['died_in_hosp'] == 1):
-            terminal_marker = TERMINAL_STATE_DEAD
-        else:
-            # survived
-            terminal_marker = TERMINAL_STATE_ALIVE
-        new_s_sequence = g['state'].shift(-1)
-        new_s_sequence.iloc[-1] = terminal_marker
-        new_s = pd.concat([new_s, new_s_sequence])
-    trajectories.loc[:, 'new_s'] = new_s.astype(np.int)
-
-    return trajectories.as_matrix()
     

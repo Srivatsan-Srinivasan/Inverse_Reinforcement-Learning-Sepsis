@@ -1,14 +1,15 @@
 import seaborn as sns
 import numpy as np
 
+NUM_ACTIONS = 25
 # there will be 752 states in total
 # plus 2 bc. terminal states(survive vs. died in hosp)
-NUM_STATES = 752
-NUM_ACTIONS = 25
+NUM_PURE_STATES = 750
+NUM_TERMINAL_STATES = 2
+NUM_STATES = NUM_PURE_STATES + NUM_TERMINAL_STATES
 # terminal states index
 TERMINAL_STATE_ALIVE = NUM_STATES - 2
 TERMINAL_STATE_DEAD = NUM_STATES - 1
-NUM_TERMINAL_STATES = 2
 
 DATA_PATH = 'data/'
 FILEPATH = DATA_PATH + 'sepsis.csv'
@@ -64,7 +65,7 @@ CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 #COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX 
 # TODO: this does not make sense but will fix later
 # when we do clustering other than kmeans
-COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission']
+COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
 ETC = ['age', 'charttime']
 
 COLS_TO_BE_LOGGED=  ['SpO2','Glucose','BUN','Creatinine', 'SGOT', 'SGPT','Total_bili','WBC_count',

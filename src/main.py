@@ -1,7 +1,8 @@
 from mdp.builder import make_mdp
 from mdp.solver import solve_mdp
 from policy.policy import GreedyPolicy
-from utils.utils import load_data, get_physician_policy
+from policy.custom_policy import get_physician_policy
+from utils.utils import load_data, extract_trajectories
 from irl.irl import *
 
 # let us think about what we need purely
@@ -30,12 +31,13 @@ if __name__ == '__main__':
     # loading the whole data
     # TODO: load only train data
     df, df_cleansed, df_centroids = load_data()
-    transition_matrix, reward_matrix = make_mdp(df_cleansed, NUM_STATES, NUM_ACTIONS)
+    trajectories = extract_trajectories(df_cleansed, NUM_PURE_STATES)
+    transition_matrix, reward_matrix = make_mdp(trajectories, NUM_STATES, NUM_ACTIONS)
     
     # arbitrary feature columns to use
     # they become binary arbitrarily
     # to check how, see phi() definition
-    feature_columns = ['1','2', '3']
+    feature_columns = df_centroids.columns
     
     # initialize s_0 sampler
     sample_initial_state = make_initial_state_sampler(df_cleansed)
@@ -49,8 +51,19 @@ if __name__ == '__main__':
     # initialize with a Greedy Policy
     # we can swap for other types of pis later
     # we may have to index s.t. pi_tilda_i
-    pi_tilda = GreedyPolicy(NUM_STATES + 2, NUM_ACTIONS)
+    pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS)
     mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
     v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
+    
+    # get pi_expert
+    pi_expert = get_physician_policy(trajectories)
+    mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_expert)
+    v_pi_expert = estimate_v_pi(W, mu_pi_expert)
+    import pdb;pdb.set_trace()
 
+    # diff
+    diff = v_pi_tilda - v_pi_expert
+    # minimize diff
+
+    # solve MDP
 
