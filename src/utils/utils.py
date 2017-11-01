@@ -215,3 +215,11 @@ def discretize_actions(
 
 def is_terminal_state(s):
     return s >= (NUM_STATES - NUM_TERMINAL_STATES)
+
+def compute_terminal_state_reward(s):
+    if s == TERMINAL_STATE_ALIVE:
+        return 1
+    elif s == TERMINAL_STATE_DEAD:
+        return -1
+    else:
+        raise Exception('not recognizing this terminal state: '.foramt(s))

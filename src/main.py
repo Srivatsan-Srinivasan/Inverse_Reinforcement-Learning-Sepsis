@@ -1,5 +1,5 @@
 from mdp.builder import make_mdp
-from mdp.solver import solve_mdp
+from mdp.solver import solve_mdpr
 from policy.policy import GreedyPolicy
 from policy.custom_policy import get_physician_policy
 from utils.utils import load_data, extract_trajectories
@@ -52,22 +52,30 @@ if __name__ == '__main__':
     # get pi_expert
     pi_expert = get_physician_policy(trajectories)
     mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_expert)
+
     v_pi_expert = estimate_v_pi(W, mu_pi_expert)
     
     # initialize opt
     opt = QuadOpt()
-    import time
-    start_t = time.time()
+    # we don't need this part for now, but let's keep it just in case
     # initialize with a Greedy Policy
     # we can swap for other types of pis later
     # we may have to index s.t. pi_tilda_i
-    pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS)
-    while True:
-        # mdp solve to get pi_tilda
-        pi_tilda = solve_mdp(transition_matrix, compute_reward)
+    # pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS)
+    # mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
+    # v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
 
-        mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
-        v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
+    while True:
+        import time
+        start_t = time.time()
+        # mdp solve to get pi_tilda
+        compute_reward = make_reward_computer(W, get_state)
+        reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
+        v_pi_tilda = solve_mdpr(transition_matrix, reward_matrix)
+        # we need to estimate because v(s0), s0 may be different
+        v_pi_tilda = estimate_v_pi_tilda(v_pi_tilda, sample_initial_state, W)
+        # implicit estimation since V_star = W*mu_pi_tilda
+        mu_pi_tilda = 1./W * v_pi_tilda
 
         # diff
         diff = v_pi_tilda - v_pi_expert
@@ -75,7 +83,9 @@ if __name__ == '__main__':
 
         end_t = time.time()
         print("Total time", end_t - start_t)
-        # minimize diff
-        # solve MDP
-
+        print(diff)
+        if converged:
+            print('converged!!!')
+            break
+    
     import pdb;pdb.set_trace()

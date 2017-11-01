@@ -170,8 +170,50 @@ def solve_mdp(transition_matrix, reward_matrix):
     return Q_star
 
 
-def solve_mdp_r(transition_matrix, reward_matrix, compute_reward, get_state):
-    Q = np.zeros(reward_matrix.shape)
-    Q_star = iterate_policy(Q, transition_matrix, reward_matrix)
-    return Q_star
+def solve_mdpr(transition_matrix, reward_matrix, gamma=0.99):
+    num_states = transition_matrix.shape[0]
+    # to make transition_matrix compatible with reward function
+    # we squash action dimension so T = s x s'
+    transition_matrix = np.sum(transition_matrix, axis=1)
+    # solve bellman equation
+    # A v = b
+    A = (np.identity(transition_matrix.shape[0]) - gamma*transition_matrix)
+    b = np.dot(transition_matrix, reward_matrix)
 
+    v_star = np.linalg.solve(A, b)
+    return v_star
+
+
+def iterate_value_mdpr(Q_table, transition_matrix, compute_reward, gamma=0.99, theta=0.1):
+    # too slow
+    num_states = Q_table.shape[0]
+    num_actions = Q_table.shape[1]    
+    V = np.zeros(num_states)
+
+    MAX_ITER = 50
+
+    n = 0
+    while n < MAX_ITER:
+        n += 1
+        delta = 0
+
+        for s in range(num_states):
+            old_v = V[s]
+            Q_s = []
+            print('at state', s)
+            for a in range(num_actions):
+                Q_sa = 0
+                for next_s in range(num_states):
+                    p = transition_matrix[s, a, next_s]
+                    r = compute_reward(s)
+                    Q_sa += p * (r + gamma * V[next_s]) 
+                Q_table[s, a] = Q_sa
+
+            V[s] = np.max(Q_table[s, :])
+            delta = max(delta, np.abs(old_v - V[s]))
+
+        if delta < theta:
+            break
+    # print(n, 'terminated at value iteration steps')
+    # print(np.sum(reward_table[reward_table < 0]), 'value iteration steps')
+    return Q_table
