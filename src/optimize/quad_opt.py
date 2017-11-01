@@ -1,24 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Oct 25 19:29:40 2017
-
-@author: SrivatsanPC
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import svm
-import pdb
 
-class quadOpt():
+class QuadOpt():
     def __init__(self,epsilon = 0.01):
         self.SVMKernelType = "linear"
         self.mu_list = []
         self.epsilon = epsilon
         self.SVMpenalty = 1000
     
-    def transDataforSVM(self, target_mu, cur_mu ):
+    def transform_data(self, target_mu, cur_mu ):
         self.mu_list.append(cur_mu) 
-        #pdb.set_trace()
         X_candidate = self.mu_list
         X_target = target_mu        
         y = [0 for i in range(len(X_candidate))]
@@ -27,10 +19,10 @@ class quadOpt():
         y.append(1)
         return X_candidate,y
     
-    def optOutput(self, target_mu, cur_mu, norm_weights = True):
+    def optimize(self, target_mu, cur_mu, norm_weights = True):
         clf = svm.SVC(kernel= self.SVMKernelType, C= self.SVMpenalty)
         
-        X,y = self.transDataforSVM(target_mu,cur_mu)
+        X,y = self.transform_data(target_mu,cur_mu)
        
         clf.fit(X,y)
         margin = 1 / np.sqrt(np.sum(clf.coef_ ** 2))
