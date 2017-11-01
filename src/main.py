@@ -48,6 +48,12 @@ if __name__ == '__main__':
     alphas = np.ones(len(feature_columns))
     W = np.random.dirichlet(alphas, size=1)[0]
     
+    pi_expert = get_physician_policy(trajectories)
+    mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_expert)
+    v_pi_expert = estimate_v_pi(W, mu_pi_expert)
+    
+    import time
+    start_t = time.time()
     # initialize with a Greedy Policy
     # we can swap for other types of pis later
     # we may have to index s.t. pi_tilda_i
@@ -55,15 +61,16 @@ if __name__ == '__main__':
     mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
     v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
     
+    
     # get pi_expert
-    pi_expert = get_physician_policy(trajectories)
-    mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_expert)
-    v_pi_expert = estimate_v_pi(W, mu_pi_expert)
-    import pdb;pdb.set_trace()
+    
+
+    #import pdb;pdb.set_trace()
 
     # diff
     diff = v_pi_tilda - v_pi_expert
+    end_t = time.time()
+    print("Total time", end_t - start_t)
     # minimize diff
-
-    # solve MDP
+       # solve MDP
 
