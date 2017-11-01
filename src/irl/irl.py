@@ -2,7 +2,7 @@ import numpy as np
 import pandas as np
 import itertools
 from constants import *
-from utils.utils import is_terminal_state
+from utils.utils import is_terminal_state, compute_terminal_state_reward
 
 def make_initial_state_sampler(df):
     '''
@@ -40,7 +40,7 @@ def estimate_feature_expectation(transition_matrix, sample_initial_state, get_st
             # sample next state
             # need to renomralize so sum(probs) < 1
             probs = transition_matrix[s, chosen_a, :]
-            probs /= np.sum(probs) 
+            probs /= np.sum(probs)
             new_s = np.random.choice(np.arange(len(probs)), p=probs)
             
             if is_terminal_state(new_s):
@@ -72,7 +72,21 @@ def estimate_v_pi(W, mu):
     return np.dot(W, mu)
 
 
-def compute_reward(W, state):
-    return np.dot(W, phi(state))
+def make_reward_computer(W, get_state):
+    def compute_reward(state):
+        if is_terminal_state(state):
+            # special case of terminal states
+            # either 1 or -1
+            return compute_terminal_state_reward(state)
+        s_cent = get_state(state)
+        return np.dot(W, phi(s_cent))
+    return compute_reward
 
-
+def estimate_v_pi_tilda(v_pi_tilda, sample_initial_state, W, sample_size=100):
+    # remove two terminal_states
+    v_pi_tilda = v_pi_tilda[:v_pi_tilda.shape[0] - NUM_TERMINAL_STATES]
+    v_pi_tilda_est = 0.0
+    for _ in range(sample_size):
+        s_0 = sample_initial_state()
+        v_pi_tilda_est += v_pi_tilda[s_0]
+    return v_pi_tilda_est/sample_size
