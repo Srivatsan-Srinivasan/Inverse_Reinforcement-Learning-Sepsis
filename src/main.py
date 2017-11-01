@@ -4,6 +4,7 @@ from policy.policy import GreedyPolicy
 from policy.custom_policy import get_physician_policy
 from utils.utils import load_data, extract_trajectories
 from irl.irl import *
+from optimize.quad_opt import QuadOpt
 
 # let us think about what we need purely
 '''
@@ -48,29 +49,32 @@ if __name__ == '__main__':
     alphas = np.ones(len(feature_columns))
     W = np.random.dirichlet(alphas, size=1)[0]
     
+    # get pi_expert
     pi_expert = get_physician_policy(trajectories)
     mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_expert)
     v_pi_expert = estimate_v_pi(W, mu_pi_expert)
     
+    # initialize opt
+    opt = QuadOpt()
     import time
     start_t = time.time()
     # initialize with a Greedy Policy
     # we can swap for other types of pis later
     # we may have to index s.t. pi_tilda_i
     pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS)
-    mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
-    v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
-    
-    
-    # get pi_expert
-    
+    while True:
+        # mdp solve to get pi_tilda
+        pi_tilda = solve_mdp(transition_matrix, compute_reward)
 
-    #import pdb;pdb.set_trace()
+        mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
+        v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
 
-    # diff
-    diff = v_pi_tilda - v_pi_expert
-    end_t = time.time()
-    print("Total time", end_t - start_t)
-    # minimize diff
-       # solve MDP
+        # diff
+        diff = v_pi_tilda - v_pi_expert
+        W, converged = opt.optimize(mu_pi_expert, mu_pi_tilda)
+        end_t = time.time()
+        print("Total time", end_t - start_t)
+        # minimize diff
+        # solve MDP
 
+    import pdb;pdb.set_trace()
