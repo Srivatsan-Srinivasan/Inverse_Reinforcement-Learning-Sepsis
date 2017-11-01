@@ -72,6 +72,7 @@ if __name__ == '__main__':
         # diff
         diff = v_pi_tilda - v_pi_expert
         W, converged = opt.optimize(mu_pi_expert, mu_pi_tilda)
+
         end_t = time.time()
         print("Total time", end_t - start_t)
         # minimize diff
