@@ -1,4 +1,5 @@
 import numpy as np
+import numba as nb
 import pandas as np
 import itertools
 from constants import *
@@ -22,7 +23,7 @@ def make_state_centroid_finder(df, columns=None):
     return f
 
 
-def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi, gamma=0.99, num_trajectories=100):
+def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi, gamma=0.99, num_trajectories=100):
     # TODO: get_state is ugly. fix this
     s = sample_initial_state()
     s_cent = get_state(s)
@@ -33,7 +34,7 @@ def estimate_feature_expectation(transition_matrix, sample_initial_state, get_st
         s_cent = get_state(s)
         for t in itertools.count():
             # accumulate phi(s) over trajectories
-            mu += gamma**t * phi(s)
+            mu += gamma**t * phi(s_cent)
             # sample next action
             probs = pi.query_Q_probs(s)
             chosen_a = np.random.choice(np.arange(len(probs)), p=probs)
@@ -53,26 +54,29 @@ def estimate_feature_expectation(transition_matrix, sample_initial_state, get_st
     return mu
 
 
-def dummy_phi(states):
-    return states
+def make_phi(df_centroids):
+    # median values for each centroid
+    stats = df_centroids.describe()
+    #take median
+    median_state = stats.loc['50%']
+    def phi(state):
+        '''
+        state: centroid values whose dimension is {num_features}
+        phi: must apply decision rule (=indicator function)
 
-
-def phi(state):
-    '''
-    state: centroid values whose dimension is {num_features}
-    phi: must apply decision rule (=indicator function)
-
-    returs: binary matrix of R^{num_features}
-    '''
-    # TODO: implement this
-    return np.uint8(state > 0)
+        returs: binary matrix of R^{num_features}
+        '''
+        # TODO: implement this
+        phi_s = np.array((state > median_state).astype(np.int))
+        return phi_s
+    return phi
 
 
 def estimate_v_pi(W, mu):
     return np.dot(W, mu)
 
 
-def make_reward_computer(W, get_state):
+def make_reward_computer(W, get_state, phi):
     def compute_reward(state):
         if is_terminal_state(state):
             # special case of terminal states

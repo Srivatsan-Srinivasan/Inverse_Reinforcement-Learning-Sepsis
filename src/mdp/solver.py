@@ -1,4 +1,5 @@
 import numpy as np
+import numba as nb
 # we need an efficient mdp solver
 
 def iterate_value(Q_table, transition_matrix, reward_table, gamma=0.95, theta=0.1):
@@ -169,7 +170,7 @@ def solve_mdp(transition_matrix, reward_matrix):
     Q_star = iterate_policy(Q, transition_matrix, reward_matrix)
     return Q_star
 
-
+@nb.jit(nopython=True)
 def solve_mdpr(transition_matrix, reward_matrix, gamma=0.99):
     num_states = transition_matrix.shape[0]
     # to make transition_matrix compatible with reward function
@@ -179,7 +180,6 @@ def solve_mdpr(transition_matrix, reward_matrix, gamma=0.99):
     # A v = b
     A = (np.identity(transition_matrix.shape[0]) - gamma*transition_matrix)
     b = np.dot(transition_matrix, reward_matrix)
-
     v_star = np.linalg.solve(A, b)
     return v_star
 
