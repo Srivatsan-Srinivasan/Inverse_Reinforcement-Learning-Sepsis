@@ -11,7 +11,7 @@ class QuadOpt():
         self.mu_list = []
         self.target = None
         self.epsilon = epsilon
-        self.SVMpenalty = 1000.0
+        self.SVMpenalty = 5500
         self.margins = []
         self.counter = 0
 
@@ -38,31 +38,31 @@ class QuadOpt():
         self.counter += 1
 
         if self.counter % 10 == 0:
-            fig, (ax1, ax2) = plt.subplots(1, 2)
+            fig, ax = plt.subplots()
+            #fig, (ax1, ax2) = plt.subplots(1, 2)
             # plot mu vectors
-            x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
-            x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
-            c = range(len(y) - 1)
-            cm = plt.cm.get_cmap('Purples')
-            ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
-            ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
-            ax1.plot(x1, x2, label='hyperplane')
+            #x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
+            #x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
+            #c = range(len(y) - 1)
+            #cm = plt.cm.get_cmap('Purples')
+            #ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
+            #ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
+            #ax1.plot(x1, x2, label='hyperplane')
             # plot margins
             # curve fitting
-            import pdb;pdb.set_trace()
-            exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
-            xx = range(self.counter)
-            params, cov = curve_fit(exp_decay, xx, self.margins, maxfev=10000)
-            yy = exp_decay(xx, *params)
-            ax2.plot(xx, yy, label='smooth')
-            ax2.plot(self.margins, label='margins')
+            #exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
+            #xx = range(self.counter)
+            #params, cov = curve_fit(exp_decay, xx, self.margins, maxfev=10000)
+            #yy = exp_decay(xx, *params)
+            #ax2.plot(xx, yy, label='smooth')
+            #ax2.plot(self.margins, label='margins')
+            ax.plot(self.margins, label='margins')
             plt.legend()
-            plt.show()
+            plt.savefig('margin{}'.format(self.counter), ppi=300, bbox_inches='tight')
         
         if norm_weights:
             weight_norm = np.linalg.norm(weights, 2)
             weights = weights/weight_norm
         else:
             weights = weights
-        print(weights)
         return weights, converged, margin

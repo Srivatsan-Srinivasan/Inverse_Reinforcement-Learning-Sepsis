@@ -39,7 +39,7 @@ if __name__ == '__main__':
     trajectories = extract_trajectories(df_cleansed, NUM_PURE_STATES)
     transition_matrix, reward_matrix = make_mdp(trajectories, NUM_STATES, NUM_ACTIONS)
     
-    df_centroids = df_centroids[['SOFA', 'age']]
+    #df_centroids = df_centroids[['SOFA', 'age']]
     # arbitrary feature columns to use
     # they become binary arbitrarily
     # to check how, see phi() definition
@@ -56,7 +56,9 @@ if __name__ == '__main__':
     W = np.random.dirichlet(alphas, size=1)[0]
     
     # get pi_expert
-    pi_expert = get_physician_policy(trajectories)
+    #pi_expert = get_physician_policy(trajectories)
+    reward_matrix = np.mean(reward_matrix, axis=1)
+    pi_expert = solve_mdpr(transition_matrix, reward_matrix)
     mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_expert)
     
     v_pi_expert = estimate_v_pi(W, mu_pi_expert)
@@ -89,13 +91,8 @@ if __name__ == '__main__':
         l2_norms[epi_i] = l2_norm
         W, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
         margins.append(margin)
-        #print('rolling avg. margin', avg_margin[-1])
-        
-        #print('vpi_tild - vpi_expert', diff)
-        if converged:
-            print('converged!!!')
-            break
+
     plt.figure(figsize=(10, 10))
     plt.plot(l2_norms)
     plt.show()
-    import pdb;pdb.set_trace()
+    plt.savefig('l2norm_expert_vs_pi_tilda', ppi=300, bbox_inches='tight')
