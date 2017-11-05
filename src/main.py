@@ -39,7 +39,7 @@ if __name__ == '__main__':
     trajectories = extract_trajectories(df_cleansed, NUM_PURE_STATES)
     transition_matrix, reward_matrix = make_mdp(trajectories, NUM_STATES, NUM_ACTIONS)
     
-    df_centroids = df_centroids.iloc[:, :2]
+    df_centroids = df_centroids[['SOFA', 'age']]
     # arbitrary feature columns to use
     # they become binary arbitrarily
     # to check how, see phi() definition
@@ -57,8 +57,8 @@ if __name__ == '__main__':
     
     # get pi_expert
     pi_expert = get_physician_policy(trajectories)
-    mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state,
-                                                get_state, phi, pi_expert)
+    mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_expert)
+    
     v_pi_expert = estimate_v_pi(W, mu_pi_expert)
     
     # initialize opt
@@ -67,33 +67,28 @@ if __name__ == '__main__':
     # initialize with a Greedy Policy
     # we can swap for other types of pis later
     # we may have to index s.t. pi_tilda_i
-    # pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS)
-    # mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
-    # v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
+    #pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS)
+    #mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, pi_tilda)
+    #v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
     margins = []
-    def runningMeanFast(x, N):
-        return np.convolve(x, np.ones((N,))/N)[(N-1):]
     num_episodes = 100
     l2_norms = np.zeros(num_episodes)
+
     for epi_i in range(num_episodes):
-        # mdp solve to get pi_tilda
+        # solve mdp with r=w phi to get pi_tilda
         compute_reward = make_reward_computer(W, get_state, phi)
         reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
-        v_pi_tilda = solve_mdpr(transition_matrix, reward_matrix)
-        # we need to estimate because v(s0), s0 may be different
-        #v_pi_tilda = estimate_v_pi_tilda(v_pi_tilda, sample_initial_state, W)
+        pi_tilda = solve_mdpr(transition_matrix, reward_matrix)
+        mu_pi_tilda = estimate_feature_expectation(transition_matrix,
+                                                   sample_initial_state,
+                                                   get_state, phi, pi_tilda)
 
-        # implicit estimation since V_star = W*mu_pi_tilda
-        #mu_pi_tilda = 1./W * v_pi_tilda
-        mu_pi_tilda = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_expert)
-
+        v_pi_tilda = estimate_v_pi(W, mu_pi_tilda)
         # diff
         l2_norm = np.linalg.norm(mu_pi_tilda - mu_pi_expert, 2)
         l2_norms[epi_i] = l2_norm
         W, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
-        print('margin', margin)
         margins.append(margin)
-        avg_margin = runningMeanFast(margins, 10)
         #print('rolling avg. margin', avg_margin[-1])
         
         #print('vpi_tild - vpi_expert', diff)

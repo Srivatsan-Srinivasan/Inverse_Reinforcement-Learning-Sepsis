@@ -1,5 +1,6 @@
 import numpy as np
 import numba as nb
+from policy.policy import GreedyPolicy
 # we need an efficient mdp solver
 
 def iterate_value(Q_table, transition_matrix, reward_table, gamma=0.95, theta=0.1):
@@ -171,17 +172,29 @@ def solve_mdp(transition_matrix, reward_matrix):
     return Q_star
 
 @nb.jit(nopython=True)
+def compute_Q_from_v_star(v_star, transition_matrix, reward_matrix, gamma):
+    num_states = transition_matrix.shape[0]
+    num_actions = transition_matrix.shape[1]
+    Q = np.zeros((num_states, num_actions))
+    for s in range(num_states):
+        for a in range(num_actions):
+            Q[s, a] = reward_matrix[s] + gamma * np.dot(transition_matrix[s, a], v_star)
+
 def solve_mdpr(transition_matrix, reward_matrix, gamma=0.99):
     num_states = transition_matrix.shape[0]
+    num_actions = transition_matrix.shape[1]
     # to make transition_matrix compatible with reward function
     # we squash action dimension so T = s x s'
-    transition_matrix = np.sum(transition_matrix, axis=1)
+    transition_matrix_ss = np.sum(transition_matrix, axis=1)
     # solve bellman equation
     # A v = b
-    A = (np.identity(transition_matrix.shape[0]) - gamma*transition_matrix)
-    b = np.dot(transition_matrix, reward_matrix)
+    A = (np.identity(transition_matrix_ss.shape[0]) - gamma*transition_matrix_ss)
+    b = np.dot(transition_matrix_ss, reward_matrix)
     v_star = np.linalg.solve(A, b)
-    return v_star
+    # recover pi_star
+    Q = compute_Q_from_v_star(v_star, transition_matrix, reward_matrix, gamma)
+    pi_star = GreedyPolicy(num_states, num_actions, Q)
+    return pi_star
 
 
 def iterate_value_mdpr(Q_table, transition_matrix, compute_reward, gamma=0.99, theta=0.1):

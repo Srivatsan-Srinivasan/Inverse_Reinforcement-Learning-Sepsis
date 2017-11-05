@@ -22,8 +22,8 @@ def make_state_centroid_finder(df, columns=None):
         return df.iloc[state]
     return f
 
-
-def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi, gamma=0.99, num_trajectories=100):
+def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi,
+                                 gamma=0.99, num_trajectories=700):
     # TODO: get_state is ugly. fix this
     s = sample_initial_state()
     s_cent = get_state(s)
