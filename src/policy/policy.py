@@ -1,13 +1,16 @@
-import numpy as np 
+import numpy as np
+import numba as nb
 
 class EpsilonGreedyPolicy:
-    def __init__(self, num_states, num_actions, epsilon, theta=1e-2, decay_rate=1e-4):
-        self._Q = np.zeros((num_states, num_actions))
+    def __init__(self, num_states, num_actions, Q=None, epsilon=0.01, theta=1e-2, decay_rate=1e-4):
+        if Q is None:
+            self._Q = np.zeros((num_states, num_actions))
+        else:
+            self._Q = Q
         self._eps = epsilon
         self._theta = theta
         self._decay_rate = decay_rate
         self._min_eps = 1e-2
-
 
     @property
     def Q(self):
@@ -131,4 +134,21 @@ class RandomPolicy:
         # do nothing...
         pass
 
+def make_fast_random_policy(num_states, num_actions):
+    Q = np.ones((num_states, num_actions), dtype=np.float32) / num_actions
+    @nb.jit
+    def f(s):
+        return Q[s, :]
+    return f
+
+def make_fast_greedy_policy(num_states, num_actions, Q=None):
+    if Q is None:
+        Q = np.zeros((num_states, num_actions))
+    @nb.jit
+    def f(s):
+        ties = np.flatnonzero(Q[s, :] == Q[s, :].max())
+        best_a = np.random.choice(ties)
+        probs = np.eye(num_actions, dtype=np.float32)[best_a]
+        return probs
+    return f
 

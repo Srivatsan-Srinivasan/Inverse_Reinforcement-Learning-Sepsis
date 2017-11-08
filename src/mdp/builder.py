@@ -1,8 +1,10 @@
 import numpy as np
+import numba as nb
 import pandas as pd
 import os
 from constants import *
 from utils.utils import *
+
 
 def make_mdp(trajectories, num_states, num_actions):
     '''
@@ -74,4 +76,8 @@ def _make_mdp(trajectories, num_states, num_actions):
 
     return transition_matrix, reward_matrix
 
-    
+def build_reward_matrix(reward_fn, num_states):
+    reward_matrix = np.zeros(num_states)
+    for s in range(num_states):
+        reward_matrix[s] = reward_fn(s)
+    return reward_matrix
