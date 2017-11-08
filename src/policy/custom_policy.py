@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-from policy.policy import GreedyPolicy
 from constants import *
+from policy.policy import GreedyPolicy
+
 
 def get_physician_policy(trajectories):
     '''

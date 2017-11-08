@@ -1,6 +1,6 @@
 import numpy as np
 import numba as nb
-from policy.policy import GreedyPolicy
+from policy.policy import EpsilonGreedyPolicy, GreedyPolicy
 # we need an efficient mdp solver
 
 def iterate_value(Q_table, transition_matrix, reward_table, gamma=0.95, theta=0.1):
@@ -166,7 +166,7 @@ def iterate_policy(Q_table, transition_matrix, reward_table, gamma=0.95, theta=1
     return Q_table
 
 
-def solve_mdp(transition_matrix, reward_matrix):
+def solve_mdp_iterate(transition_matrix, reward_matrix):
     Q = np.zeros(reward_matrix.shape)
     Q_star = iterate_policy(Q, transition_matrix, reward_matrix)
     return Q_star
@@ -179,8 +179,9 @@ def compute_Q_from_v_star(v_star, transition_matrix, reward_matrix, gamma):
     for s in range(num_states):
         for a in range(num_actions):
             Q[s, a] = reward_matrix[s] + gamma * np.dot(transition_matrix[s, a], v_star)
+    return Q
 
-def solve_mdpr(transition_matrix, reward_matrix, gamma=0.99):
+def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):
     num_states = transition_matrix.shape[0]
     num_actions = transition_matrix.shape[1]
     # to make transition_matrix compatible with reward function
@@ -193,8 +194,9 @@ def solve_mdpr(transition_matrix, reward_matrix, gamma=0.99):
     v_star = np.linalg.solve(A, b)
     # recover pi_star
     Q = compute_Q_from_v_star(v_star, transition_matrix, reward_matrix, gamma)
-    pi_star = GreedyPolicy(num_states, num_actions, Q)
-    return pi_star
+    #pi = GreedyPolicy(num_states, num_actions, Q)
+    pi = EpsilonGreedyPolicy(num_states, num_actions, Q, epsilon=0.01)
+    return pi
 
 
 def iterate_value_mdpr(Q_table, transition_matrix, compute_reward, gamma=0.99, theta=0.1):

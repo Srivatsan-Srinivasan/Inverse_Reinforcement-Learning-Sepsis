@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import numba as nb
 import pandas as pd
 from scipy import stats
 from sklearn.decomposition import PCA
@@ -212,14 +213,13 @@ def discretize_actions(
         input_4hourly__conversion_from_binned_to_continuous, \
         median_dose_vaso__conversion_from_binned_to_continuous
 
-
 def is_terminal_state(s):
     return s >= (NUM_STATES - NUM_TERMINAL_STATES)
 
-def compute_terminal_state_reward(s):
+def compute_terminal_state_reward(s, num_features):
     if s == TERMINAL_STATE_ALIVE:
-        return 1
+        return np.sqrt(num_features)
     elif s == TERMINAL_STATE_DEAD:
-        return -1
+        return -np.sqrt(num_features)
     else:
         raise Exception('not recognizing this terminal state: '.foramt(s))

@@ -1,5 +1,4 @@
 import numpy as np
-import numba as nb
 import pandas as np
 import itertools
 from constants import *
@@ -24,15 +23,19 @@ def make_state_centroid_finder(df, columns=None):
 
 def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi,
                                  gamma=0.99, num_trajectories=700):
+    max_iter = 500
     # TODO: get_state is ugly. fix this
     s = sample_initial_state()
     s_cent = get_state(s)
     mu = np.zeros(phi(s_cent).shape)
+    
 
     for i in range(num_trajectories):
         s = sample_initial_state()
         s_cent = get_state(s)
         for t in itertools.count():
+            if t > max_iter:
+                break
             # accumulate phi(s) over trajectories
             mu += gamma**t * phi(s_cent)
             # sample next action
@@ -72,21 +75,19 @@ def make_phi(df_centroids):
     return phi
 
 
-def estimate_v_pi(W, mu):
-    return np.dot(W, mu)
-
-
 def make_reward_computer(W, get_state, phi):
     def compute_reward(state):
         if is_terminal_state(state):
             # special case of terminal states
             # either 1 or -1
-            return compute_terminal_state_reward(state)
+            num_features = W.shape[0]
+            return compute_terminal_state_reward(state, num_features)
         s_cent = get_state(state)
         return np.dot(W, phi(s_cent))
     return compute_reward
 
-def estimate_v_pi_tilda(v_pi_tilda, sample_initial_state, W, sample_size=100):
+def estimate_v_pi_tilda(W, mu, sample_initial_state, sample_size=100):
+    v_pi_tilda = np.dot(W, mu)
     # remove two terminal_states
     v_pi_tilda = v_pi_tilda[:v_pi_tilda.shape[0] - NUM_TERMINAL_STATES]
     v_pi_tilda_est = 0.0
