@@ -23,13 +23,16 @@ def make_state_centroid_finder(df, columns=None):
 
 def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi,
                                  gamma=0.99, num_trajectories=700):
+    '''
+    estimate mu_pi and v_pi with monte carlo simulation
+    '''
     max_iter = 500
     # TODO: get_state is ugly. fix this
     s = sample_initial_state()
     s_cent = get_state(s)
     mu = np.zeros(phi(s_cent).shape)
+    v_sum = 0.0
     
-
     for i in range(num_trajectories):
         s = sample_initial_state()
         s_cent = get_state(s)
@@ -43,18 +46,22 @@ def estimate_feature_expectation(transition_matrix, sample_initial_state, get_st
             chosen_a = np.random.choice(np.arange(len(probs)), p=probs)
             # sample next state
             # need to renomralize so sum(probs) < 1
-            probs = transition_matrix[s, chosen_a, :]
+            probs = np.copy(transition_matrix[s, chosen_a, :])
             probs /= np.sum(probs)
             new_s = np.random.choice(np.arange(len(probs)), p=probs)
             
             if is_terminal_state(new_s):
                 # there's no phi(terminal_state)
+                # in practice, non-zero rewars for terminal states
+                num_features = mu.shape[0]
+                v_sum += gamma** t * compute_terminal_state_reward(new_s, num_features)
                 break
             s = new_s
             s_cent = get_state(new_s)
       
     mu = (1.0 * mu) / num_trajectories
-    return mu
+    v =  v_sum / num_trajectories
+    return mu, v
 
 
 def make_phi(df_centroids):
@@ -87,11 +94,13 @@ def make_reward_computer(W, get_state, phi):
     return compute_reward
 
 def estimate_v_pi_tilda(W, mu, sample_initial_state, sample_size=100):
+    # this does not work. don't use this for now.
     v_pi_tilda = np.dot(W, mu)
     # remove two terminal_states
     v_pi_tilda = v_pi_tilda[:v_pi_tilda.shape[0] - NUM_TERMINAL_STATES]
     v_pi_tilda_est = 0.0
+    # TODO: vectorize this
     for _ in range(sample_size):
         s_0 = sample_initial_state()
         v_pi_tilda_est += v_pi_tilda[s_0]
-    return v_pi_tilda_est/sample_size
+    return v_pi_tilda_est / sample_size
