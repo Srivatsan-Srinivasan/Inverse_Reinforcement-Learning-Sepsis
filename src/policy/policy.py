@@ -87,6 +87,7 @@ class StochasticPolicy:
             self._Q = np.zeros((num_states, num_actions))
         else:
             # in case we want to import e-greedy
+            # make Q non negative to be useful as probs
             self._Q = Q
 
     @property
@@ -104,7 +105,9 @@ class StochasticPolicy:
             return Q_probs[s, a]
 
     def choose_action(self, s):
-        probs = self._Q[s,:] / np.sum(self._Q[s, :])
+        # make min Q(s,a) = 0 (e.g. -3 - (-3) = 0)
+        alphas = self._Q[s,:] - np.min(self._Q[s, :])
+        probs = np.random.dirichlet(alphas, size=1)[0]
         return np.random.choice(len(probs), p=probs)
 
     def update_Q_val(self, s, a, val):
