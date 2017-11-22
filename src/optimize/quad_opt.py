@@ -1,57 +1,40 @@
 import numpy as np
-from sklearn import svm
+from sklearn.svm import LinearSVC
+
 
 class QuadOpt():
-    def __init__(self, epsilon=0.01):
-        self.SVMKernelType = "linear"
-        self.mu_list = []
-        self.target = None
+    def __init__(self, epsilon=0.01, penalty=1.0):
+        self.mus = []
         self.epsilon = epsilon
-        self.SVMpenalty = 1000
-        self.margins = []
+        self.penalty = penalty
 
-    def transform_data(self, target_mu, cur_mu ):
-        self.mu_list.append(cur_mu)
-        X = self.mu_list + [target_mu]
-        X = np.array(X)
-        y = np.zeros(len(X)).astype(np.int)
+    def transform_data(self, target_mu, cur_mu):
+        X = np.array(self.mus + [target_mu])
+        y = np.empty(len(X))
+        y.fill(-1)
+        # target mu is labeled +1
         y[-1] = 1
-        y = np.array(y)
         return X, y
     
-    def optimize(self, target_mu, cur_mu, norm_weights=True):
-        clf = svm.SVC(kernel=self.SVMKernelType, C=self.SVMpenalty)
-        X,y = self.transform_data(target_mu,cur_mu)
+    def optimize(self, target_mu, cur_mu, normalize=True):
+        self.mus.append(cur_mu)
+        X,y = self.transform_data(target_mu, cur_mu)
+        clf = LinearSVC(C=self.penalty)
         clf.fit(X,y)
-        margin = 1 / np.sqrt(np.sum(clf.coef_ ** 2))
-        converged = (margin <= self.epsilon)
-        weights = clf.coef_[0]
-        bias = clf.intercept_
-        self.margins.append(margin)
+        # since decision hyperplane is W^T mu = 0
+        # coefficients is a normal vector to hyperplane
+        W = clf.coef_[0]
+        norm = np.linalg.norm(W, 2)
+        # TODO: I think this is wrong
+        # margin = 1 / weight_norm
+        if normalize:
+            W = W / norm
+        # taken from Abbeel (2004)
+        # dist from a support vector to mu_expert
+        diffs = target_mu - np.array(self.mus)
+        # TODO: check if abs can be applied
+        # otherwise margin can be negative
+        margin = np.abs(W.dot(diffs.T)).min()
+        converged = (margin < self.epsilon)
+        return W, converged, margin
 
-        # TODO: refactor this out to utils
-        #fig, ax = plt.subplots()
-        #fig, (ax1, ax2) = plt.subplots(1, 2)
-        # plot mu vectors
-        #x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
-        #x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
-        #c = range(len(y) - 1)
-        #cm = plt.cm.get_cmap('Purples')
-        #ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
-        #ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
-        #ax1.plot(x1, x2, label='hyperplane')
-        # plot margins
-        # curve fitting
-        #exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
-        #xx = range(self.counter)
-        #params, cov = curve_fit(exp_decay, xx, self.margins, maxfev=10000)
-        #yy = exp_decay(xx, *params)
-        #ax2.plot(xx, yy, label='smooth')
-        #ax2.plot(self.margins, label='margins')
-        
-        if norm_weights:
-            weight_norm = np.linalg.norm(weights, 2)
-            weights = weights/weight_norm
-        else:
-            weights = weights
-        return weights, converged, margin

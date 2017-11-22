@@ -148,20 +148,3 @@ def plot_end_reward_action_error(data):
     plt.ylabel('the last 100-step reward')        
     plt.show(fig)
 
-
-def plot_hyperplane(X, y, weights):
-    fig, ax = plt.subplots()
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
-    x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
-    c = range(len(y) - 1)
-    cm = plt.cm.get_cmap('Purples')
-    ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
-    ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
-    ax1.plot(x1, x2, label='hyperplane')
-    exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
-    xx = range(self.counter)
-    params, cov = curve_fit(exp_decay, xx, self.margins, maxfev=10000)
-    yy = exp_decay(xx, *params)
-    ax2.plot(xx, yy, label='smooth')
-    ax2.plot(self.margins, label='margins')
