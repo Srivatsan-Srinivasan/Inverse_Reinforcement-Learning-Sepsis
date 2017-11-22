@@ -94,9 +94,12 @@ class GreedyPolicy:
     
     def _query_Q_probs(self, s, a=None):
         num_actions = self._Q.shape[1]
-        ties = np.flatnonzero(self._Q[s, :] == self._Q[s, :].max())
-        best_a = np.random.choice(ties)
-        probs = np.eye(num_actions, dtype=float)[best_a] 
+        try:
+            ties = np.flatnonzero(self._Q[s, :] == self._Q[s, :].max())
+            best_a = np.random.choice(ties)
+            probs = np.eye(num_actions, dtype=float)[best_a]
+        except ValueError:
+            import pdb;pdb.set_trace()
         if a is None:
             return probs
         else:
