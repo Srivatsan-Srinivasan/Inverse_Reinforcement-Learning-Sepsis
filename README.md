@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## TODOs
 - testing on gridworld. reproduce similar results as Abbeel.
 - implement policy extraction from a set of policies found in IRL (at the end of Section 3 in Abbeel (2004)
@@ -29,11 +28,3 @@
 cd src/
 python main.py
 '''
-=======
-Howdy!
-
-Let's keep things organized here.
-
-Find some large files here, if you need.
-- cleansed_data + state clusters (750) [link](https://s3.amazonaws.com/cs282-irl/cleansed_data.csv)
->>>>>>> e0da8459e9fd869aa12a935da0554e66d6660dc5
