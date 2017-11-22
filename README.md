@@ -19,9 +19,9 @@
 - [ ] max entropy learner (Ramachandran, 2007)
 
 ## examples
-![Reward Margin](/src/img/exp2_margin_i10.png | width=500)
-![Difference in Feature Expectation](/src/img/exp2_dist_mu_i10.png | width=500)
-![Performance of Policy](/src/img/exp2_v_pi_i10.png | width=500)
+![Reward Margin](/src/img/exp2_margin_i10.png =500x500)
+![Difference in Feature Expectation](/src/img/exp2_dist_mu_i10.png =500x500)
+![Performance of Policy](/src/img/exp2_v_pi_i10.png =500x500)
 
 ## gettings started
 '''
