@@ -39,11 +39,23 @@ def load_data():
         df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
         df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
 
-    return df, df_cleansed, df_centroids
+    data = {'train': (df_train, df_cleansed_train, df_centroids_train),
+            'test': (df_test, df_cleansed_test, df_centroids_test),
+            'full': (df, df_cleansed, df_centroids),
+           }
+    return data
 
 def _load_data(path):
     df = pd.read_csv(path)
-    cols = df.columns
+    return df
+
+
+def _load_data2(path):
+    '''
+    curious about the motivation of this fuction
+    '''
+    df = pd.read_csv(path)
+    cols = df.column
     valid_cols = list(set(INTEGER_COLS) & set(cols))
     df[valid_cols].astype(np.int)
     return df

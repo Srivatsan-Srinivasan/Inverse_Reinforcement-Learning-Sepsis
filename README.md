@@ -19,9 +19,14 @@
 - [ ] max entropy learner (Ramachandran, 2007)
 
 ## examples
-![Reward Margin](/src/img/exp2_margin_i10.png)
-![Difference in Feature Expectation](/src/img/exp2_dist_mu_i10.png)
-![Performance of Policy](/src/img/exp2_v_pi_i10.png)
+### against empirical expert policy (clincian)
+ <img alt='reward margin' src="/src/img/exp_margin_i15.png" width="500" height="500">
+ <img alt='diff in mu' src="/src/img/exp_dist_mu_i15.png" width="500" height="500">
+ <img alt='diff in v_pi' src="/src/img/exp_v_pi_i15.png" width="500" height="500">
+### against artificial expert policy (optimal mdp solution)
+ <img alt='reward margin' src="/src/img/exp2_margin_i15.png" width="500" height="500">
+ <img alt='diff in mu' src="/src/img/exp2_dist_mu_i15.png" width="500" height="500">
+ <img alt='diff in v_pi' src="/src/img/exp2_v_pi_i15.png" width="500" height="500">
 
 ## gettings started
 '''
