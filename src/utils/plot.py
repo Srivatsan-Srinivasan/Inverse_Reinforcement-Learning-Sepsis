@@ -1,167 +1,92 @@
 import numpy as np
 import scipy as sp
-
-import matplotlib as mpl
 from matplotlib import pyplot as plt
 import seaborn as sns
-sns.set()
-# sns.set_palette("husl")
-
-def calculate_interval(a, n):
-    mu = np.mean(a)
-    sem = sp.stats.sem(a)
-    if sem == 0.0:
-        # to prevent division by zero
-        sem = np.finfo(float).eps
-    return sp.stats.t.interval(0.80, n - 1, loc=mu, scale=sem)
+from scipy.stats import sem
+sns.set(style='dark', palette='husl')
+from constants import IMG_PATH
 
 
-def plot_arrow(location, direction, plot):
-    arrow = plt.arrow(location[0], location[1], dx, dy, fc="k", ec="k", head_width=0.05, head_length=0.1)
-    plot.add_patch(arrow) 
+def plot_hyperplane(X, xx, yy):
+    '''
+    TODO: fix this
+    plot hyperplane and vectors (mus)
+    '''
+    pass
+    #fig, ax = plt.subplots()
+    #fig, (ax1, ax2) = plt.subplots(1, 2)
+    #x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
+    #x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
+    #c = range(len(y) - 1)
+    #cm = plt.cm.get_cmap('Purples')
+    #ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
+    #ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
+    #ax1.plot(x1, x2, label='hyperplane')
+    #exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
+    #xx = range(self.counter)
+    #ax2.plot(xx, yy, label='smooth')
 
 
-def _plot_iter_reward(reward_per_step, algo_name, line_color, line_style):
-    mu = np.mean(reward_per_step, axis=0)
-    x = np.arange(mu.shape[0])
-    n = reward_per_step.shape[0]
-
-    intervals = np.apply_along_axis(calculate_interval, 0, reward_per_step, n=n)
-    plt.plot(mu, lw=2, color=line_color, linestyle=line_style, label=algo_name)
-    plt.fill_between(x, intervals[0,:], intervals[1,:], alpha=.3, color=line_color)
-    plt.title('') 
-    plt.xlabel('iteration')
-    plt.ylabel('cumulative reward throughout trial')
+def plot_margin_expected_value(margins, num_iterations, plot_prefix='new'):
+    '''
+    plot margin in expected value of expert (best) and second-best policy
+    params:
+        margins: {num_trials x num_iterations} array containing margins
+    '''
+    avg_margins = np.mean(margins, axis=0)
+    margin_se = sem(margins, axis=0)
+    fig = plt.figure(figsize=(10, 10))
+    plt.ylim((0, np.max(margins) * 1.2))
+    plt.errorbar(np.arange(1, num_iterations+1), avg_margins,
+                 label=r'$w^T\mu_E-w^T\mu_{\tilde{\pi}}$',
+                 yerr=margin_se, fmt='-o')
+    plt.xticks(np.arange(0, num_iterations+1, 5))
+    plt.xlabel('Number of iterations')
+    plt.ylabel('Margin in Expected Value')
     plt.legend()
+    plt.savefig('{}{}_margin_i{}'.format(IMG_PATH, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.close()
 
 
-def _plot_episode_reward(reward_per_episode, algo_name, line_color, line_style):
-    mu = np.mean(reward_per_episode, axis=0)
-    x = np.arange(mu.shape[0])
-    n = reward_per_episode.shape[0]
-    intervals = np.apply_along_axis(calculate_interval, 0, reward_per_episode, n=n)
-    plt.plot(mu, lw=2, color=line_color, linestyle=line_style, label=algo_name)
-    plt.fill_between(x, intervals[0,:], intervals[1,:], alpha=.3, color=line_color)
 
-    plt.title('') 
-    plt.xlabel('episode')
-    plt.ylabel('total reward per episode')
+def plot_diff_feature_expectation(dist_mus, num_iterations, plot_prefix='new'):
+    '''
+    plot l2 distance between mu_expert and mu_pi_tilda
+    '''
+    dist_se = sem(dist_mus, axis=0)
+    avg_dist_mus = np.mean(dist_mus, axis=0)
+    fig = plt.figure(figsize=(10, 10))
+    plt.ylim((0, np.max(dist_mus) * 1.2))
+    plt.errorbar(np.arange(1, num_iterations+1), avg_dist_mus,
+                 label=r'$||\mu_E-\mu_{\tilde{\pi}}||$',
+                 yerr=dist_se, fmt='-o')
+    plt.xticks(np.arange(1, num_iterations+1, 5))
+    plt.xlabel('Number of iterations')
+    plt.ylabel('L2 Distance in Feature Expectation')
     plt.legend()
+    plt.savefig('{}{}_dist_mu_i{}'.format(IMG_PATH, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.close()
 
 
 
+def plot_value_function(v_pis, v_pi_expert, num_iterations, plot_prefix='new'):
+    avg_v_pis = np.mean(v_pis, axis=0)
+    v_pi_se = sem(v_pis, axis=0)
+    fig = plt.figure(figsize=(10, 10))
+    plt.ylim((np.min(avg_v_pis)*.8, np.max(avg_v_pis)*1.2))
+    plt.errorbar(np.arange(1, num_iterations+1), avg_v_pis, yerr=v_pi_se,
+                 fmt='-o', label=r'$E_{s_0 \sim D(s)}[V^{\tilde \pi}(s_0)]$')
+    plt.axhline(v_pi_expert, label=r'$E_{s_0 \sim D(s)}[V^{\pi_E}(s_0)]$', c='c')
+    plt.xticks(np.arange(1, num_iterations+1, 5))
+    plt.xlabel('Number of iterations')
 
-def _plot_Q_and_pi(maze, Q_table, algo_name):
-    row_count = len(maze)
-    col_count = len(maze[0]) 
+    plt.ylabel('Performance')
+    plt.legend()
+    plt.savefig('{}{}_v_pi_i{}'.format(IMG_PATH, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.close()
 
-    value_function = np.reshape(np.max(Q_table, 1), (row_count, col_count))
-    policy_function = np.reshape(np.argmax(Q_table, 1), (row_count, col_count))
-    wall_info = .5 + np.zeros((row_count, col_count))
-
-    wall_mask = np.zeros((row_count , col_count) )
-    for row in range(row_count):
-        for col in range(col_count):
-            if maze[row][col] == '#':
-                wall_mask[row,col] = 1 
-    wall_info = np.ma.masked_where( wall_mask==0 , wall_info )
-
-    fig3 = plt.figure(figsize=(10,5))
-    # value function plot 
-    plt.imshow(value_function, interpolation='none', cmap=mpl.cm.jet)
-    plt.colorbar()
-    # plt.title('Policy for {}'.format(algo_name))        
-    plt.imshow(wall_info, interpolation='none', cmap=mpl.cm.gray)
-    # plt.imshow(1 - wall_mask, interpolation='none', cmap=mpl.cm.jet)
-    
-    for row in range(row_count):
-        for col in range(col_count):
-            if wall_mask[row][col] == 1:
-                continue 
-            if policy_function[row,col] == 0:
-                dx = 0; dy = -.5
-            if policy_function[row,col] == 1:
-                dx = 0; dy = .5
-            if policy_function[row,col] == 2:
-                dx = .5; dy = 0
-            if policy_function[row,col] == 3:
-                dx = -.5; dy = 0
-            plt.arrow(col, row, dx, dy, shape='full', fc='w', ec='w', length_includes_head=True, head_width=.2)
-    plt.title('Policy for {}'.format(algo_name))        
-    plt.show(fig3)
-
-
-def plot_reward_per_iter(maze, maze_name, algorithms):
-    # Useful stats for the plot
-    fig1 = plt.figure(figsize=(10,5))
-    plt.title(maze_name)
-    for Q_table, reward_per_step, reward_per_episode, algo_name, ls, lc in algorithms:
-        _plot_iter_reward(reward_per_step, algo_name, lc, ls)
-    plt.show(fig1)
-
-
-def plot_reward_per_episode(maze, maze_name, algorithms):
-    # Useful stats for the plot
-    fig2 = plt.figure(figsize=(10,5))
-    plt.title(maze_name)
-    for Q_table, reward_per_step, reward_per_episode, algo_name, ls, lc in algorithms:
-        _plot_episode_reward(reward_per_episode, algo_name, lc, ls)
-    plt.show(fig2)
-
-
-def plot_policy_value_fn(maze, maze_name, algorithms):
-    # Useful stats for the plot
-    for Q_table, reward_per_step, reward_per_episode, algo_name, ls, lc in algorithms:
-        _plot_Q_and_pi(maze, Q_table, algo_name)
-
-
-def plot_cum_reward_action_error(data):
-    summary = []
-    action_error_probs = []
-    for reward_per_step, reward_per_episode, algo_name, action_err_p in data:        
-        reward_per_trial = np.sum(reward_per_episode, axis=1)
-        summary.append(reward_per_trial)
-        action_error_probs.append(action_err_p)
-
-    fig = plt.figure(figsize=(10,5))
-    plt.boxplot(summary, labels=action_error_probs)
-    plt.title('Algorithm: {}'.format(algo_name))
-    plt.xlabel('action error probability')
-    plt.ylabel('total reward per trial')        
-    plt.show(fig)
-
-
-    
-def plot_end_reward_action_error(data):
-    summary = []
-    action_error_probs = []
-    for reward_per_step, _, algo_name, action_err_p in data:        
-        end_rewards = reward_per_step[:, -100:]
-        reward_per_trial = np.sum(end_rewards, axis=1)
-        summary.append(reward_per_trial)
-        action_error_probs.append(action_err_p)
-    
-    fig = plt.figure(figsize=(10,5))
-    plt.boxplot(summary, labels=action_error_probs)
-    plt.title('Algorithm: {}'.format(algo_name))
-    plt.xlabel('action error probability')
-    plt.ylabel('the last 100-step reward')        
-    plt.show(fig)
-
-
-def plot_hyperplane(X, y, weights):
-    fig, ax = plt.subplots()
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
-    x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
-    c = range(len(y) - 1)
-    cm = plt.cm.get_cmap('Purples')
-    ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
-    ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
-    ax1.plot(x1, x2, label='hyperplane')
-    exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
-    xx = range(self.counter)
-    params, cov = curve_fit(exp_decay, xx, self.margins, maxfev=10000)
-    yy = exp_decay(xx, *params)
-    ax2.plot(xx, yy, label='smooth')
-    ax2.plot(self.margins, label='margins')
+def plot_intermediate_rewards():
+    '''
+    TODO: need to be implemented
+    '''
+    pass
