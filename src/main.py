@@ -1,6 +1,7 @@
 from utils.utils import load_data, extract_trajectories
 from mdp.builder import make_mdp
-from irl.max_margin import max_margin_learner
+# from irl.max_margin import max_margin_learner
+from irl.max_margin_gridworld import max_margin_learner
 from constants import *
 
 
