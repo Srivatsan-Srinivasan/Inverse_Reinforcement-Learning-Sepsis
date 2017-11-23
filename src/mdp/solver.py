@@ -2,9 +2,64 @@ import numpy as np
 import numba as nb
 import logging
 import itertools
-
 from policy.policy import EpsilonGreedyPolicy, GreedyPolicy
 from learners.monte_carlo_on_policy import run_mc_actor
+
+# Update the Q table 
+def update_Q_Qlearning( Q_table, state , action , reward , new_state , new_action, alpha=0.5, gamma=0.95 ):
+    new_action = np.random.choice(np.flatnonzero(Q_table[ new_state , : ] == Q_table[ new_state , : ].max()))
+    Q_table[state, action] = Q_table[state, action] + alpha*(reward + gamma*Q_table[new_state, new_action]- Q_table[state, action])
+    # FILL THIS IN 
+    return Q_table 
+
+def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES, NUM_ACTIONS, episode_count = 500, max_task_iter = np.inf, epsilon = 0.2):
+    # Initialize the Q table 
+    Q_table = np.zeros( ( NUM_STATES , NUM_ACTIONS ) )
+    iteration = 0
+
+    # Loop until the episode is done 
+    for episode_iter in range( episode_count ):
+        print ("episode_iter", episode_iter)
+        if iteration >= 3000 and episode_iter >= 100:
+            break
+        else:
+            # Start the task 
+            task.reset()
+            state = task.observe() 
+            print ("initial state", state)
+            action = policy( state , Q_table , NUM_ACTIONS , epsilon ) 
+            task_iter = 0 
+
+            # Loop until done
+            while task_iter < max_task_iter:
+                task_iter += 1
+
+                # to get a new state
+                # new_state, reward = task.perform_action( action )
+                reward = reward_matrix[state]
+                t_probs = np.copy(transition_matrix[state, action, :])
+                new_state = np.random.choice(NUM_STATES, p=t_probs)
+                new_action = policy( new_state , Q_table , NUM_ACTIONS , epsilon ) 
+                if iteration%5000 == 0:
+                    print ("iteration", iteration )
+                    print ("s,a,s,a", state, action, new_state, new_action)
+
+                # update Q_table    
+                Q_table = update_Q_Qlearning(Q_table , 
+                                             state , action , reward , new_state , new_action)
+                # stop if at goal/else update for the next iteration 
+                if task.is_terminal( state ):
+                    break
+                else:
+                    state = new_state
+                    action = new_action
+                                # store the data
+                iteration += 1
+
+    # derive optimal policy
+    optimal_policy = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_table)
+    return optimal_policy, Q_table
+
 
 def evaluate_policy_monte_carlo(env, pi, gamma=0.99, num_episodes=100):
     rewards = []
@@ -99,6 +154,8 @@ def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):
     this approach does not work very well, though computationally fast
     hard to pin down why but it feels wrong right?
     '''
+    #reward_matrix = [0 for i in range(81)]
+    #reward_matrix[50] = 50
     num_states = transition_matrix.shape[0]
     num_actions = transition_matrix.shape[1]
     # to make transition_matrix compatible with reward function
@@ -107,6 +164,7 @@ def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):
     # solve bellman equation
     # A v = b
     A = np.identity(num_states) - gamma*transition_matrix_ss
+    #A = (np.identity(transition_matrix_ss.shape[0]) - gamma*transition_matrix_ss)
     b = np.dot(transition_matrix_ss, reward_matrix)
     v_star = np.linalg.solve(A, b)
     # recover pi_star

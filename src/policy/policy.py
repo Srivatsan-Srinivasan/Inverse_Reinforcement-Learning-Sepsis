@@ -75,7 +75,7 @@ class GreedyPolicy:
     def choose_action(self, s):
         ties = np.flatnonzero(self._Q[s, :] == self._Q[s, :].max())
         return np.random.choice(ties)
-
+    
     def update_Q_val(self, s, a, val):
         self._Q[s,a] = val
 

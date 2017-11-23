@@ -39,11 +39,7 @@ def load_data():
         df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
         df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
 
-    data = {'train': (df_train, df_cleansed_train, df_centroids_train),
-            'test': (df_test, df_cleansed_test, df_centroids_test),
-            'full': (df, df_cleansed, df_centroids),
-           }
-    return data
+    return df, df_cleansed, df_centroids
 
 def _load_data(path):
     df = pd.read_csv(path)
