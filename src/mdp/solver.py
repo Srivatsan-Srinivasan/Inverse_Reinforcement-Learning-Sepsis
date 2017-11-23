@@ -9,12 +9,12 @@ def policy( state , Q_table , action_count , epsilon ):
     if np.random.random() < epsilon:
         action = np.random.choice( action_count ) 
     else: 
-        action = np.argmax( Q_table[ state , : ] ) 
+        action = np.random.choice(np.flatnonzero(Q_table[ state , : ] == Q_table[ state , : ].max()))
     return action 
 
 # Update the Q table 
 def update_Q_Qlearning( Q_table, state , action , reward , new_state , new_action, alpha=0.5, gamma=0.95 ):
-    new_action = np.argmax(Q_table[state, :])
+    new_action = np.random.choice(np.flatnonzero(Q_table[ new_state , : ] == Q_table[ new_state , : ].max()))
     Q_table[state, action] = Q_table[state, action] + alpha*(reward + gamma*Q_table[new_state, new_action]- Q_table[state, action])
     # FILL THIS IN 
     return Q_table 
@@ -26,12 +26,14 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
 
     # Loop until the episode is done 
     for episode_iter in range( episode_count ):
+        print ("episode_iter", episode_iter)
         if iteration >= 3000 and episode_iter >= 100:
             break
         else:
             # Start the task 
             task.reset()
             state = task.observe() 
+            print ("initial state", state)
             action = policy( state , Q_table , NUM_ACTIONS , epsilon ) 
             task_iter = 0 
 
@@ -45,11 +47,13 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
                 t_probs = np.copy(transition_matrix[state, action, :])
                 new_state = np.random.choice(NUM_STATES, p=t_probs)
                 new_action = policy( new_state , Q_table , NUM_ACTIONS , epsilon ) 
-                
+                if iteration%5000 == 0:
+                    print ("iteration", iteration )
+                    print ("s,a,s,a", state, action, new_state, new_action)
+
                 # update Q_table    
                 Q_table = update_Q_Qlearning(Q_table , 
                                              state , action , reward , new_state , new_action)
-
                 # stop if at goal/else update for the next iteration 
                 if task.is_terminal( state ):
                     break
@@ -57,7 +61,9 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
                     state = new_state
                     action = new_action
                                 # store the data
-                iteration += 1 
+                iteration += 1
+
+
                    
     # derive optimal policy
     optimal_policy = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_table)
