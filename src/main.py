@@ -11,6 +11,7 @@ from mdp.solver import Q_value_iteration
 from irl.max_margin import run_max_margin
 from irl.irl import  make_state_centroid_finder, make_phi, make_initial_state_sampler
 from constants import NUM_STATES, NUM_ACTIONS, TERMINAL_STATE_ALIVE, TERMINAL_STATE_DEAD, NUM_PURE_STATES
+from irl.max_margin_gridworld import max_margin_learner
 
 
 if __name__ == '__main__':
