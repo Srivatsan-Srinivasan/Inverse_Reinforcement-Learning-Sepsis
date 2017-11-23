@@ -62,7 +62,6 @@ def max_margin_learner(task, NUM_STATES, NUM_ACTIONS, transition_matrix, reward_
     #v_pis_star = []
 
     for i in range(num_iterations):
-        # import pdb;pdb.set_trace()
         print('iteration at {}/{} pi_expert'.format(i+1, num_iterations))
         # step 2: solve qp
         W_tilda, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
@@ -73,6 +72,7 @@ def max_margin_learner(task, NUM_STATES, NUM_ACTIONS, transition_matrix, reward_
             # step 4: solve mdpr
             compute_reward = make_reward_computer(W_tilda, get_state, phi)
             reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
+            import pdb;pdb.set_trace()
             pi_tilda, Q_table = Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES, NUM_ACTIONS)
             # pi_tilda = solve_mdp(transition_matrix, reward_matrix)
             # pi_tilda = pi_expert

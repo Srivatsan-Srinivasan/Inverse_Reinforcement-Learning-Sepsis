@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import itertools
 # from constants import *
-from utils.utils import is_terminal_state, compute_terminal_state_reward
 
 def make_initial_state_sampler(df):
     '''
@@ -14,13 +13,10 @@ def make_initial_state_sampler(df):
     return f
 
 def make_initial_state_sampler_mock(task):
-    '''
-    we only care about empirically observed initial states.
-    '''
+    task.reset()
+    initial_states = task.observe()
     def f():
-        task.reset()
-        initial_state = task.observe()
-        return np.random.choice(initial_state)
+        return np.random.choice(initial_states)
     return f
 
 
@@ -33,9 +29,7 @@ def make_state_centroid_finder(df, columns=None):
 
 def make_state_centroid_finder_mock(task, NUM_STATES):
     '''
-    Two features to describe state:
-    1. whether it is terminal state
-    2. whether it is wall
+    Discretize 9x9 gridworld into 16 2x2 smaller grids/states + 2 addtional states (last row and last column).
     '''
     df_centroid_mock = np.zeros((NUM_STATES, 18))
     for state in range(NUM_STATES):
@@ -87,7 +81,6 @@ def make_state_centroid_finder_mock(task, NUM_STATES):
 def estimate_feature_expectation(task, transition_matrix, sample_initial_state, get_state, phi, pi,
                                  gamma=0.99, num_trajectories=100):
     max_iter = 500
-    # TODO: get_state is ugly. fix this
     s = sample_initial_state()
     s_cent = get_state(s)
     mu = np.zeros(phi(s_cent).shape)
@@ -145,12 +138,12 @@ def make_reward_computer(W, get_state, phi):
         return np.dot(W, phi(s_cent))
     return compute_reward
 
-def estimate_v_pi_tilda(W, mu, sample_initial_state, sample_size=100):
-    v_pi_tilda = np.dot(W, mu)
-    # remove two terminal_states
-    v_pi_tilda = v_pi_tilda[:v_pi_tilda.shape[0] - NUM_TERMINAL_STATES]
-    v_pi_tilda_est = 0.0
-    for _ in range(sample_size):
-        s_0 = sample_initial_state()
-        v_pi_tilda_est += v_pi_tilda[s_0]
-    return v_pi_tilda_est/sample_size
+# def estimate_v_pi_tilda(W, mu, sample_initial_state, sample_size=100):
+#     v_pi_tilda = np.dot(W, mu)
+#     # remove two terminal_states
+#     v_pi_tilda = v_pi_tilda[:v_pi_tilda.shape[0] - NUM_TERMINAL_STATES]
+#     v_pi_tilda_est = 0.0
+#     for _ in range(sample_size):
+#         s_0 = sample_initial_state()
+#         v_pi_tilda_est += v_pi_tilda[s_0]
+#     return v_pi_tilda_est/sample_size
