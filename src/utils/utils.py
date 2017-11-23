@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import MiniBatchKMeans 
 from sklearn import preprocessing 
 from constants import *
+import pickle
 
 def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     check1 = (set(numerical_cols) - set(all_cols))
@@ -20,6 +21,53 @@ def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
 
 def load_data():
     # TODO: accept filepath to get train/test/vali
+    return _load_train_data(), _load_validation_data(), _load_full_data()
+
+def save_data(obj, path):
+    with open(path, 'wb') as f:
+        pickle.dump(obj, f)
+
+
+def _load_train_data():
+    num_states = NUM_STATES - NUM_TERMINAL_STATES
+    if os.path.isfile(TRAIN_CLEANSED_DATA_FILEPATH):
+        df_train = _load_data(FILEPATH)
+        df_cleansed_train = _load_data(TRAIN_CLEANSED_DATA_FILEPATH)
+        df_centroids_train = _load_data(TRAIN_CENTROIDS_DATA_FILEPATH)
+    else:
+        df_train = _load_data(TRAIN_FILEPATH)
+        df_corrected = correct_data(df_train)
+        df_norm_train, norm_means, norm_stds = normalize_data(df_corrected_train)
+        _save_data(norm_means, NORM_MEANS_PATH)
+        _save_data(norm_stds, NORM_STANDARD_DEVIATIONS_PATH)
+
+        X, mu, y = separate_X_mu_y(df_norm_train, ALL_VALUES)
+        X_to_cluster = X.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        X_centroids, X_clustered, mbk = clustering(X_to_cluster, k=num_states, batch_size=300)
+        _save_data(mbk, CLUSTERIZER_PATH)
+        X['state'] = pd.Series(X_clustered)
+
+        df_cleansed_train = pd.concat([X, mu, y], axis=1)
+        df_centroids_train = pd.DataFrame(X_centroids, columns=X_to_cluster.columns)
+        df_cleansed.to_csv(TRAIN_CLEANSED_DATA_FILEPATH, index=False)
+        df_centroids.to_csv(TRAIN_CENTROIDS_DATA_FILEPATH, index=False)
+    return (df_train, df_cleansed_train, df_centroids_train)
+
+
+def _load_validation_data():
+    num_states = NUM_STATES - NUM_TERMINAL_STATES
+    if os.path.isfile(CLEANSED_DATA_FILEPATH):
+        df_validate = _load_data(FILEPATH)
+        df_cleansed_validate = _load_data(CLEANSED_DATA_FILEPATH)
+        df_centroids_validate = _load_data(CENTROIDS_DATA_FILEPATH)
+    else:
+        with open(CLUSTERIZER_PATH, 'rb') as f:
+            mbk = pickle.load(f)
+        X_clustered = mbk.predict(X)
+        X['state'] = pd.Series(X_clustered)
+    return (df_validate, df_cleansed_validate, df_centroids_validate)
+
+def _load_full_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES
     if os.path.isfile(CLEANSED_DATA_FILEPATH):
         df = _load_data(FILEPATH)
@@ -35,15 +83,9 @@ def load_data():
         X['state'] = pd.Series(X_clustered)
         df_cleansed = pd.concat([X, mu, y], axis=1)
         df_centroids = pd.DataFrame(X_centroids, columns=X_to_cluster.columns)
-        
         df_cleansed.to_csv(CLEANSED_DATA_FILEPATH, index=False)
         df_centroids.to_csv(CENTROIDS_DATA_FILEPATH, index=False)
-
-    data = {'train': (df_train, df_cleansed_train, df_centroids_train),
-            'test': (df_test, df_cleansed_test, df_centroids_test),
-            'full': (df, df_cleansed, df_centroids),
-           }
-    return data
+    return (df, df_cleansed, df_centroids)
 
 def _load_data(path):
     df = pd.read_csv(path)
@@ -115,10 +157,12 @@ def _extract_trajectories(df, num_states):
 
 def normalize_data(df):
     # divide cols: numerical, categorical, text data
-    # logarithimic scale 
-    df[COLS_TO_BE_NORMALIZED] -= np.mean(df[COLS_TO_BE_NORMALIZED], axis=0)
-    df[COLS_TO_BE_NORMALIZED] /= np.std(df[COLS_TO_BE_NORMALIZED], axis=0)
-    return df
+    # logarithimic scale
+    norm_means = np.mean(df[COLS_TO_BE_NORMALIZED], axis=0)
+    norm_stds = np.std(df[COLS_TO_BE_NORMALIZED], axis=0)
+    df[COLS_TO_BE_NORMALIZED] -= norm_means
+    df[COLS_TO_BE_NORMALIZED] /= norm_stds
+    return df, norm_means, norm_stds
 
 
 def correct_data(df):
@@ -174,7 +218,7 @@ def clustering(X, k=2000, batch_size=100):
     mbk.fit(X)
     X_centroids = mbk.cluster_centers_
     X_clustered = mbk.predict(X)
-    return X_centroids, X_clustered
+    return X_centroids, X_clustered, mbk
 
 
 def discretize_actions(

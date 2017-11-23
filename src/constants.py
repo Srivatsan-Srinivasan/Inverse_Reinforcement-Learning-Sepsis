@@ -19,9 +19,9 @@ TRAIN_FILEPATH = DATA_PATH + 'Sepsis_imp_train.csv'
 TRAIN_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
 TRAIN_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
 
-TEST_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
-TEST_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
-TEST_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
+VALIDATE_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
+VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
+VALIDATE_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
 
 CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
 CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
