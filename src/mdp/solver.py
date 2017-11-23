@@ -1,7 +1,9 @@
 import numpy as np
 import numba as nb
 from policy.policy import EpsilonGreedyPolicy, GreedyPolicy
-# we need an efficient mdp solver
+########################################
+######## Added for gridworld ###########
+########################################
 def policy( state , Q_table , action_count , epsilon ):
     # an epsilon-greedy policy
     if np.random.random() < epsilon:
@@ -20,19 +22,11 @@ def update_Q_Qlearning( Q_table, state , action , reward , new_state , new_actio
 def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES, NUM_ACTIONS, episode_count = 500, max_task_iter = np.inf, epsilon = 0.2):
     # Initialize the Q table 
     Q_table = np.zeros( ( NUM_STATES , NUM_ACTIONS ) )
-
-    # Initialize transition count table
-    # transition_count_table = np.zeros((state_count, action_count, state_count))
     iteration = 0
-    # temp_policy = np.zeros((NUM_STATES, NUM_ACTIONS))
-    # optimal_policy = np.ones(temp_policy.shape)
-
-    # while np.sum(temp_policy-optimal_policy) != 0:
-    #     optimal_policy = np.copy(temp_policy)
 
     # Loop until the episode is done 
     for episode_iter in range( episode_count ):
-        if iteration >= 5000 and episode_iter >= 100:
+        if iteration >= 3000 and episode_iter >= 100:
             break
         else:
             # Start the task 
@@ -43,38 +37,32 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
 
             # Loop until done
             while task_iter < max_task_iter:
-                task_iter = task_iter + 1
+                task_iter += 1
+
                 # to get a new state
-                new_state, reward = task.perform_action( action )
-                # t_probs = np.copy(transition_matrix[state, action, :])
-                # new_state = np.random.choice(NUM_STATES, p=t_probs)
-                # reward = reward_matrix[state]
+                # new_state, reward = task.perform_action( action )
+                reward = reward_matrix[state]
+                t_probs = np.copy(transition_matrix[state, action, :])
+                new_state = np.random.choice(NUM_STATES, p=t_probs)
                 new_action = policy( new_state , Q_table , NUM_ACTIONS , epsilon ) 
                 
-                # update transition table
-                # transition_count_table[state, action, new_state] +=1
-                # store the data
-                iteration += 1
-                    
-
+                # update Q_table    
                 Q_table = update_Q_Qlearning(Q_table , 
                                              state , action , reward , new_state , new_action)
-
-                # for state in range(NUM_STATES):
-                #     ind_max_a = np.argmax(Q_table[state, :])    
-                #     temp_policy[state, ind_max_a] = 1    
 
                 # stop if at goal/else update for the next iteration 
                 if task.is_terminal( state ):
                     break
                 else:
                     state = new_state
-                    action = new_action 
+                    action = new_action
+                                # store the data
+                iteration += 1 
                    
     # derive optimal policy
     optimal_policy = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_table)
     return optimal_policy, Q_table
-
+########################################################################################################################
 def iterate_value(Q_table, transition_matrix, reward_table, gamma=0.95, theta=0.1):
     num_states = Q_table.shape[0]
     num_actions = Q_table.shape[1]    

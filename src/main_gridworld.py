@@ -20,6 +20,7 @@ grid_world = [   # HERE: Make this one bigger, probably!
     '#o......#',
     '#########']
 
+
 if __name__ == '__main__':
 
 
@@ -43,12 +44,7 @@ if __name__ == '__main__':
     file_name = '/Users/linyingzhang/Desktop/grid_world_optimal_policy.pickle'
     with open(file_name, "rb") as f:
         pi_expert = pickle.load(f, encoding='latin1')
-
-        # loading pi_expert(optimal policy)
-    file_name = '/Users/linyingzhang/Desktop/grid_world_optimal_Q.pickle'
-    with open(file_name, "rb") as f:
-        Q_table = pickle.load(f, encoding='latin1')
-
+    # convert the format of pi_expert
     Q = np.eye(NUM_ACTIONS, dtype=np.float)[pi_expert.astype(int)]
     Q = Q.reshape(NUM_STATES, NUM_ACTIONS)
 
@@ -62,4 +58,4 @@ if __name__ == '__main__':
     # check irl/max_margin for implementation
     # check img/ for output
     max_margin_learner(task, NUM_STATES, NUM_ACTIONS, transition_matrix, reward_matrix, pi_expert,
-                   num_iterations=50, epsilon=0.01)
+                   num_iterations=20, epsilon=0.01)

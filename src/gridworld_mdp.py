@@ -17,26 +17,16 @@ from policy.policy import EpsilonGreedyPolicy, GreedyPolicy
 # 'o' = origin grid cell
 # '.' = empty grid cell
 # '*' = goal
-# grid_world = [   # HERE: Make this one bigger, probably! 
-#     '#########',
-#     '#..#....#',
-#     '#..#..#.#',
-#     '#..#..#.#',
-#     '#..#.##.#',
-#     '#....*#.#',
-#     '#######.#',
-#     '#o......#',
-#     '#########']
-
 grid_world = [   # HERE: Make this one bigger, probably! 
-    'o.......',
-    '........',
-    '........',
-    '........',
-    '........',
-    '.....*..',
-    '........',
-    '........,']
+    '#########',
+    '#..#....#',
+    '#..#..#.#',
+    '#..#..#.#',
+    '#..#.##.#',
+    '#....*#.#',
+    '#######.#',
+    '#o......#',
+    '#########']
 
 # ----------------- #
 #   Key Functions   # 
@@ -54,21 +44,15 @@ def policy( state , Q_table , action_count , epsilon ):
 def update_Q_Qlearning( Q_table, state , action , reward , new_state , new_action, alpha=0.5, gamma=0.95 ):
     new_action = np.argmax(Q_table[state, :])
     Q_table[state, action] = Q_table[state, action] + alpha*(reward + gamma*Q_table[new_state, new_action]- Q_table[state, action])
-    # FILL THIS IN 
     return Q_table 
 
-def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES, NUM_ACTIONS, episode_count = 500, max_task_iter = np.inf, epsilon = 0.2):
+def Q_learning(task, transition_matrix, reward_matrix, NUM_STATES, NUM_ACTIONS, episode_count = 500, max_task_iter = np.inf, epsilon = 0.2):
     # Initialize the Q table 
     Q_table = np.zeros( ( NUM_STATES , NUM_ACTIONS ) )
 
     # Initialize transition count table
-    # transition_count_table = np.zeros((state_count, action_count, state_count))
+    transition_count_table = np.zeros((state_count, action_count, state_count))
     iteration = 0
-    # temp_policy = np.zeros((NUM_STATES, NUM_ACTIONS))
-    # optimal_policy = np.ones(temp_policy.shape)
-
-    # while np.sum(temp_policy-optimal_policy) != 0:
-    #     optimal_policy = np.copy(temp_policy)
 
     # Loop until the episode is done 
     for episode_iter in range( episode_count ):
@@ -86,23 +70,15 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
                 task_iter = task_iter + 1
                 # to get a new state
                 new_state, reward = task.perform_action( action )
-                # t_probs = np.copy(transition_matrix[state, action, :])
-                # new_state = np.random.choice(NUM_STATES, p=t_probs)
-                # reward = reward_matrix[state]
                 new_action = policy( new_state , Q_table , NUM_ACTIONS , epsilon ) 
                 
                 # update transition table
-                # transition_count_table[state, action, new_state] +=1
-                # store the data
+                transition_count_table[state, action, new_state] +=1
                 iteration += 1
                     
 
                 Q_table = update_Q_Qlearning(Q_table , 
                                              state , action , reward , new_state , new_action)
-
-                # for state in range(NUM_STATES):
-                #     ind_max_a = np.argmax(Q_table[state, :])    
-                #     temp_policy[state, ind_max_a] = 1    
 
                 # stop if at goal/else update for the next iteration 
                 if task.is_terminal( state ):
@@ -216,8 +192,4 @@ for row in range( row_count ):
         plt.arrow( col , row , dx , dy , shape='full', fc='w' , ec='w' , lw=3, length_includes_head=True, head_width=.2 )
 plt.title( 'Policy' )        
 plt.show( block=False ) 
-
-# If you want to interact with it further... 
-import pdb 
-pdb.set_trace()
     
