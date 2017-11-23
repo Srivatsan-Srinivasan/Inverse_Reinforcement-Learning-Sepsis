@@ -31,7 +31,7 @@ def make_state_centroid_finder_mock(task, NUM_STATES):
     '''
     Discretize 9x9 gridworld into 16 2x2 smaller grids/states + 2 addtional states (last row and last column).
     '''
-    df_centroid_mock = np.zeros((NUM_STATES, 18))
+    df_centroid_mock = np.zeros((NUM_STATES, 20))
     for state in range(NUM_STATES):
         if state in [0,1,9,10]:
             df_centroid_mock[state, 0] = 1
@@ -69,10 +69,10 @@ def make_state_centroid_finder_mock(task, NUM_STATES):
             df_centroid_mock[state, 16] = 1
         elif state in [72,73,74,75,76,77,78,79,80]:
             df_centroid_mock[state, 17] = 1
-        # if task.is_terminal( state ):
-        #     df_centroid_mock[state, 18] = 1
-        # if task.is_wall(state):
-        #     df_centroid_mock[state,19] = 1
+        if task.is_terminal( state ):
+            df_centroid_mock[state, 18] = 1
+        if task.is_wall(state):
+            df_centroid_mock[state,19] = 1
 
     def f(state): # get_state(): a function to find centroid for a given state
         return df_centroid_mock[state]
