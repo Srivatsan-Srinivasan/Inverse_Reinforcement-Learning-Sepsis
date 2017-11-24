@@ -96,14 +96,18 @@ class StochasticPolicy:
             # in case we want to import e-greedy
             # make Q non negative to be useful as probs
             self._Q = Q
-        self.opt_actions = np.ones((num_states, num_actions)) * -1
+        #self.opt_actions = np.ones((num_states, num_actions)) * -1
 
     @property
     def Q(self):
         # support read-only
         return np.copy(self._Q)
 
-    def query_Q_probs(self, s=None, a=None, laplacian_smoothing=False):
+    def query_Q_probs(self, s=None, a=None, laplacian_smoothing=True):
+        '''
+        returns:
+            probability distribution of actions over all states
+        '''
         if laplacian_smoothing:
             LAPLACIAN_PROB = 0.01
             L = np.max(self._Q, axis=1) * LAPLACIAN_PROB

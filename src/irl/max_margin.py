@@ -35,13 +35,14 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         print('objective: get close to ->')
         print('avg mu_pi_expert', np.mean(mu_pi_expert))
         print('v_pi_expert', v_pi_expert)
+        print('')
 
     # initialize vars for plotting
     margins = np.zeros((num_trials, num_iterations))
     dist_mus = np.zeros((num_trials, num_iterations))
     v_pis = np.zeros((num_trials, num_iterations))
     intermediate_reward_matrix = np.zeros((reward_matrix.shape))
-
+    approx_exp_policies = np.array([None] * num_trials)
 
     for trial_i in tqdm(range(num_trials)):
         if verbose:
@@ -53,9 +54,9 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
                                                            sample_initial_state,
                                                            get_state, phi, pi_tilda)
         opt = QuadOpt(epsilon=svm_epsilon, penalty=svm_penalty)
-        pi_tildas = []
         best_actions_old = None
         W_old = None
+        pi_tildas = np.array([None]*num_iterations)
         for i in range(num_iterations):
             # step 2: solve qp
             W, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
@@ -69,7 +70,7 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
             reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
             Q_star = Q_value_iteration(transition_matrix, reward_matrix)
             pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_star)
-            pi_tildas.append(pi_tilda)
+            pi_tildas[i] = pi_tilda
             # step 5: estimate mu pi tilda
             mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(
                                    transition_matrix,
@@ -106,8 +107,9 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         # find a near-optimal policy from a policy reservoir
         # taken from Abbeel (2004)
         # TODO: retrieve near-optimal expert policy
-        approx_exp_policy = None
-
+        approx_exp_policies[trial_i] = pi_tildas[np.argmin(margins[trial_i])].Q
+    
+    approx_exp_policy = np.mean(approx_exp_policies, axis=0)
     results = {'margins': margins,
                'dist_mus': dist_mus,
                'v_pis': v_pis,
@@ -137,4 +139,4 @@ def run_max_margin(transition_matrix, reward_matrix, pi_expert,
     plot_diff_feature_expectation(res['dist_mus'], num_iterations, experiment_id)
     plot_value_function(res['v_pis'], res['v_pi_expert'], num_iterations, experiment_id)
 
-    return None
+    return res['approx_exp_policy']

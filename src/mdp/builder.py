@@ -6,21 +6,21 @@ from constants import *
 from utils.utils import *
 
 
-def make_mdp(trajectories, num_states, num_actions):
+def make_mdp(trajectories, num_states, num_actions, transition_filepath, reward_filepath):
     '''
     build states by running k-means clustering
     Note: we exclude nominal categorical columns from clustering.
     the columns to be excluded are: chartime, icustyaid, bloc
     '''
-    if os.path.isfile(TRANSITION_MATRIX_FILEPATH) and \
-            os.path.isfile(REWARD_MATRIX_FILEPATH):
-        transition_matrix = np.load(TRANSITION_MATRIX_FILEPATH)
-        reward_matrix = np.load(REWARD_MATRIX_FILEPATH)
+    if os.path.isfile(transition_filepath) and \
+            os.path.isfile(reward_filepath):
+        transition_matrix = np.load(transition_filepath)
+        reward_matrix = np.load(reward_filepath)
     else:
         print('making mdp')
         transition_matrix, reward_matrix = _make_mdp(trajectories, num_states, num_actions)
-        np.save(TRANSITION_MATRIX_FILEPATH, transition_matrix)
-        np.save(REWARD_MATRIX_FILEPATH, reward_matrix)
+        np.save(transition_filepath, transition_matrix)
+        np.save(reward_filepath, reward_matrix)
     return transition_matrix, reward_matrix
 
 

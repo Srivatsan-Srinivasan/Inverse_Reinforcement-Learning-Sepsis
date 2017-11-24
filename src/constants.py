@@ -24,9 +24,18 @@ VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_val.csv'
 # we don't use this for now
 VALIDATE_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_val.csv'
 
-TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories.npy'
-TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
-REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table.npy'
+TRAIN_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_train.npy'
+TRAIN_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_train.npy'
+TRAIN_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table_train.npy'
+
+VALIDATE_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_val.npy'
+VALIDATE_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_val.npy'
+VALIDATE_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table_val.npy'
+
+PHYSICIAN_Q = DATA_PATH + 'physician_q.npy'
+MDP_OPTIMAL_Q = DATA_PATH + 'mdp_optimal_q.npy'
+IRL_PHYSICIAN_Q = DATA_PATH + 'irl_physician_q.npy'
+IRL_MDP_Q = DATA_PATH + 'irl_mdp_q.npy'
 
 Q_STAR_FILEPATH = DATA_PATH + 'q_star.npy'
 Q_CLINICIAN_FILEPATH = DATA_PATH + 'q_clinician.npy'
