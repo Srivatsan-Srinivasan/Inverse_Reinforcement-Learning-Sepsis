@@ -78,9 +78,9 @@ class GreedyPolicy:
         return np.random.choice(ties)
     
     def get_opt_actions(self):
-        opt_actions = np.zeros(len(self._Q))
-        for i in range(len(opt_actions)):
-            opt_actions[i] = self.choose_action(i)
+        opt_actions = np.zeros(self._Q.shape[0])
+        for s in range(opt_actions.shape[0]):
+            opt_actions[s] = self.choose_action(s)
         return opt_actions
     
     def update_Q_val(self, s, a, val):
@@ -109,11 +109,11 @@ class StochasticPolicy:
             probability distribution of actions over all states
         '''
         if laplacian_smoothing:
-            LAPLACIAN_PROB = 0.01
-            L = np.max(self._Q, axis=1) * LAPLACIAN_PROB
-            Q = self._Q - np.min(self._Q, axis=1) + L
+            LAPLACIAN_SMOOTHER = 0.01
+            L = (np.max(self._Q, axis=1) - np.min(self._Q, axis=1))* LAPLACIAN_SMOOTHER
+            Q = self._Q - np.expand_dims(np.min(self._Q, axis=1) - L, axis=1)
             #probs = np.random.dirichlet(alphas, size=1)[0]
-            Q_probs = Q / np.sum(Q, axis=1)
+            Q_probs = Q / np.expand_dims(np.sum(Q, axis=1), axis=1)
         else:
             Q_probs = self._Q - np.min(self._Q, axis=1)
         if s is None and a is None:

@@ -4,6 +4,7 @@ import logging
 import itertools
 from policy.policy import EpsilonGreedyPolicy, GreedyPolicy
 from learners.monte_carlo_on_policy import run_mc_actor
+from constants import TERMINAL_STATE_ALIVE, TERMINAL_STATE_DEAD
 
 # Update the Q table 
 def update_Q_Qlearning( Q_table, state , action , reward , new_state , new_action, alpha=0.5, gamma=0.95 ):
@@ -104,14 +105,14 @@ def evaluate_policy(Q, transition_matrix, reward_table, gamma=0.99, theta=1e-1, 
     return v
 
 @nb.jit
-def iterate_policy(Q, transition_matrix, reward_matrix, gamma=0.99, theta=1e-2, strict_mode=False,
-        max_iter=100):
+def iterate_policy(Q, transition_matrix, reward_matrix, gamma=0.99, theta=1e-2, strict_mode=False, max_iter=100):
     reward_matrix = np.expand_dims(reward_matrix, axis=1)
     for n in range(max_iter):
         print('iterating policy at ', n)
         old_best_a = np.argmax(Q, 1)
         v_pi = evaluate_policy(Q, transition_matrix, reward_matrix, gamma, theta)
         # assumes r = r(s) not r(s,a)
+        # r(s,a)
         Q = reward_matrix + gamma * transition_matrix.dot(v_pi)
         best_a = np.argmax(Q, 1)
         if strict_mode:
@@ -134,17 +135,25 @@ def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
     num_actions = transition_matrix.shape[1]
     reward_matrix = np.expand_dims(reward_matrix, axis=1)
     v_old = np.zeros((num_states))
-    
     for t in itertools.count():
-        Q = reward_matrix + gamma * transition_matrix.dot(v_old)
+        Q = reward_matrix + transition_matrix.dot(gamma * v_old)
+        #v = np.zeros(num_states)
+        #for s in range(num_states):
+        #    # evaluate this policy's action choices
+        #    ties = np.flatnonzero(Q[s, :] == Q[s, :].max())
+        #    a = np.random.choice(ties)
+        #    v[s] = Q[s, a]
         v = np.max(Q, axis=1)
+        #v[TERMINAL_STATE_ALIVE] = 0
+        #v[TERMINAL_STATE_DEAD] = 0
+        #Q[TERMINAL_STATE_ALIVE, :] = 0
+        #Q[TERMINAL_STATE_DEAD, :] = 0
         max_delta= np.linalg.norm(v_old - v, np.inf)
         if max_delta < theta:
             #print('value converged after {} steps'.format(t))
             break
         v_old = v
-    Q_star = reward_matrix + gamma * np.dot(transition_matrix, v)
-    return Q_star
+    return Q
 
 
 def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):
