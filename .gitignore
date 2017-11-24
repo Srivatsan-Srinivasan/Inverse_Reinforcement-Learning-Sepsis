@@ -1,6 +1,8 @@
 # custom stuff
 src/data/**/*.csv
-src/data/**/transition_matrix*.npy
+src/data/**/transition_matrix*
+src/data/transition_matrix*
+src/data/backup/transition_matrix*
 
 # Byte-compiled / optimized / DLL files
 **/*.pyc
