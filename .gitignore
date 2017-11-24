@@ -1,5 +1,5 @@
 # custom stuff
-src/data/**/*
+src/data/**/*.csv
 
 # Byte-compiled / optimized / DLL files
 **/*.pyc

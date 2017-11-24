@@ -27,7 +27,7 @@ def save_data(obj, path):
 
 def save_Q(Q, save_path, data_name):
     # TODO: check for instance of class and make sure to save Q instead of an instance
-    np.save('{}{}_Q'.format(save_path, data_name), Q)
+    np.save('{}{}'.format(save_path, data_name), Q)
     
 def load_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES
@@ -78,8 +78,10 @@ def initialize_save_data_folder():
     date = datetime.datetime.now().strftime('%Y_%m_%d')
     save_path = DATA_PATH + date + '/'
     try:
-        os.makedirs(save_path)
-        os.makedirs(save_path + IMG_PATH)
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+            if not os.path.exists(save_path + IMG_PATH):
+                os.makedirs(save_path + IMG_PATH)
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise Exception('could not initialize save data folder')
