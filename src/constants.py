@@ -16,18 +16,18 @@ DATA_PATH = 'data/'
 FILEPATH = DATA_PATH + 'sepsis.csv'
 
 TRAIN_FILEPATH = DATA_PATH + 'Sepsis_imp_train.csv'
-TRAIN_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
-TRAIN_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
+TRAIN_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_train.csv'
+TRAIN_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_train.csv'
 
-TEST_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
-TEST_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
-TEST_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
+VALIDATE_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
+VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_val.csv'
+# we don't use this for now
+VALIDATE_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_val.csv'
 
-CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
-CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
 TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories.npy'
 TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
 REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table.npy'
+
 Q_STAR_FILEPATH = DATA_PATH + 'q_star.npy'
 Q_CLINICIAN_FILEPATH = DATA_PATH + 'q_clinician.npy'
 VF_CLINICIAN_FILEPATH  = DATA_PATH + 'vf_clinician.npy'
@@ -82,7 +82,7 @@ COLS_TO_BE_LOGGED=  ['SpO2','Glucose','BUN','Creatinine', 'SGOT', 'SGPT','Total_
 
 ALREADY_NORMAL_LOGGED = list(set(COLS_TO_BE_NORMALIZED) - set(COLS_TO_BE_LOGGED))
 
-INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state_cluster']
+INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state', 'icustayid', 'bloc']
 
 # gender, age, readmission, rrt, vent, sedation could be excluded
 COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc']
