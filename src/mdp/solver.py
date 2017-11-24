@@ -137,13 +137,6 @@ def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
     v_old = np.zeros((num_states))
     for t in itertools.count():
         Q = reward_matrix + transition_matrix.dot(gamma * v_old)
-        # if we want tie breaking
-        #v = np.zeros(num_states)
-        #for s in range(num_states):
-        #    # evaluate this policy's action choices
-        #    ties = np.flatnonzero(Q[s, :] == Q[s, :].max())
-        #    a = np.random.choice(ties)
-        #    v[s] = Q[s, a]
         v = np.max(Q, axis=1)
         #v[TERMINAL_STATE_ALIVE] = 0
         #v[TERMINAL_STATE_DEAD] = 0
@@ -154,7 +147,7 @@ def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
             #print('value converged after {} steps'.format(t))
             break
         v_old = v
-    return Q
+        return Q[:-2, :]
 
 
 def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):

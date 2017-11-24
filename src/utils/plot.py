@@ -27,7 +27,7 @@ def plot_hyperplane(X, xx, yy):
     #ax2.plot(xx, yy, label='smooth')
 
 
-def plot_margin_expected_value(margins, num_iterations, plot_prefix='new'):
+def plot_margin_expected_value(margins, num_iterations, save_path, plot_prefix='new'):
     '''
     plot margin in expected value of expert (best) and second-best policy
     params:
@@ -44,12 +44,12 @@ def plot_margin_expected_value(margins, num_iterations, plot_prefix='new'):
     plt.xlabel('Number of iterations')
     plt.ylabel('Margin in Expected Value')
     plt.legend()
-    plt.savefig('{}{}_margin_i{}'.format(IMG_PATH, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.savefig('{}{}_margin_i{}'.format(save_path, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 
 
-def plot_diff_feature_expectation(dist_mus, num_iterations, plot_prefix='new'):
+def plot_diff_feature_expectation(dist_mus, num_iterations, save_path, plot_prefix='new'):
     '''
     plot l2 distance between mu_expert and mu_pi_tilda
     '''
@@ -64,12 +64,12 @@ def plot_diff_feature_expectation(dist_mus, num_iterations, plot_prefix='new'):
     plt.xlabel('Number of iterations')
     plt.ylabel('L2 Distance in Feature Expectation')
     plt.legend()
-    plt.savefig('{}{}_dist_mu_i{}'.format(IMG_PATH, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.savefig('{}{}_dist_mu_i{}'.format(save_path, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 
 
-def plot_value_function(v_pis, v_pi_expert, num_iterations, plot_prefix='new'):
+def plot_value_function(v_pis, v_pi_expert, num_iterations, save_path, plot_prefix='new'):
     avg_v_pis = np.mean(v_pis, axis=0)
     v_pi_se = sem(v_pis, axis=0)
     fig = plt.figure(figsize=(10, 10))
@@ -84,7 +84,7 @@ def plot_value_function(v_pis, v_pi_expert, num_iterations, plot_prefix='new'):
 
     plt.ylabel('Performance')
     plt.legend()
-    plt.savefig('{}{}_v_pi_i{}'.format(IMG_PATH, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.savefig('{}{}_v_pi_i{}'.format(save_path, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 def plot_intermediate_rewards():

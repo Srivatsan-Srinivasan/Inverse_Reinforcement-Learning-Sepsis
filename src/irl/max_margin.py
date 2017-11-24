@@ -13,7 +13,7 @@ from constants import NUM_STATES, NUM_ACTIONS, DATA_PATH
 def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, verbose):
+                       num_iterations, num_trials, use_stochastic_policy, verbose):
 
     '''
     reproduced maximum margin IRL algorithm
@@ -37,8 +37,8 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         print('')
 
     # initialize vars for plotting
-    margins = np.zeros((num_trials, num_iterations))
-    dist_mus = np.zeros((num_trials, num_iterations))
+    margins = np.full((num_trials, num_iterations), 10000)
+    dist_mus = np.full((num_trials, num_iterations), 10000)
     v_pis = np.zeros((num_trials, num_iterations))
     intermediate_reward_matrix = np.zeros((reward_matrix.shape))
     approx_exp_policies = np.array([None] * num_trials)
@@ -62,17 +62,20 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         for i in range(num_iterations):
             # step 2: solve qp
             W, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
-            weights[i] = W
             # step 3: terminate if margin <= epsilon
             if converged:
                 print('margin coverged with', margin)
                 break
 
+            weights[i] = W
             # step 4: solve mdpr
             compute_reward = make_reward_computer(W, get_state, phi)
             reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
             Q_star = Q_value_iteration(transition_matrix, reward_matrix)
-            pi_tilda = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+            if use_stochastic_policy:
+                pi_tilda = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+            else:
+                pi_tilda = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
             pi_tildas[i] = pi_tilda
             # step 5: estimate mu pi tilda
             mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(
@@ -137,7 +140,7 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
 def run_max_margin(transition_matrix, reward_matrix, pi_expert,
                     sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
-                   num_iterations, num_trials, experiment_id, verbose):
+                   num_iterations, num_trials, experiment_id, save_path, use_stochastic_policy, verbose):
     '''
     returns:
         approximate expert policy
@@ -146,14 +149,14 @@ def run_max_margin(transition_matrix, reward_matrix, pi_expert,
     res = _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, verbose)
-    np.save('{}{}_i{}_result'.format(DATA_PATH, experiment_id, num_iterations), res)
-    np.save('{}{}_i{}_weights'.format(DATA_PATH, experiment_id, num_iterations),
+                       num_iterations, num_trials, use_stochastic_policy, verbose)
+    np.save('{}{}_i{}_result'.format(save_path, experiment_id, num_iterations), res)
+    np.save('{}{}_i{}_weights'.format(save_path, experiment_id, num_iterations),
             res['approx_expert_weights'])
-
-    plot_margin_expected_value(res['margins'], num_iterations, experiment_id)
-    plot_diff_feature_expectation(res['dist_mus'], num_iterations, experiment_id)
+    img_path = save_path + IMG_PATH
+    plot_margin_expected_value(res['margins'], num_iterations, img_path, experiment_id)
+    plot_diff_feature_expectation(res['dist_mus'], num_iterations, img_path, experiment_id)
     # TODO: this is not really a good measure of policy performance
-    plot_value_function(res['v_pis'], res['v_pi_expert'], num_iterations, experiment_id)
+    plot_value_function(res['v_pis'], res['v_pi_expert'], num_iterations, img_path, experiment_id)
 
     return res['approx_expert_Q']

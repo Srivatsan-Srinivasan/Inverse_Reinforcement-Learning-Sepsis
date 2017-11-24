@@ -1,8 +1,10 @@
+import os 
+import numpy as np
+
+
 import evaluation.log_likelihood as lh
 from utils import evaluation_utils as eu
-from utils.utils import load_data
-import numpy as np
-import pdb
+from utils.utils import load_data, initialize_save_data_folder
 from policy.policy import GreedyPolicy, StochasticPolicy
 from constants import *
 
@@ -18,15 +20,38 @@ def test_against_expert(df, expert_filepath, irl_expert_filepath, plot_suffix=''
                                pi_physician_stochastic, num_states = NUM_PURE_STATES,
                                num_actions = NUM_ACTIONS, restrict_num=True, avg = True)
     KL = lh.get_KL_divergence(pi_physician_stochastic, opt_policy_learned)
-    eu.plot_KL(KL, plot_suffix=plot_suffix)
-    eu.plot_avg_LL(LL, plot_suffix=plot_suffix)
+    # initalize saving
+    save_path = initialize_save_data_folder() + IMG_PATH
+    print('will save plot results to {}'.format(save_path))
+    eu.plot_KL(KL, plot_suffix=plot_suffix, save_path=save_path)
+    eu.plot_avg_LL(LL, plot_suffix=plot_suffix, save_path=save_path)
 
 
 if __name__ == '__main__':
     df_train, df_val, df_centroids = load_data()
+    # for now, this must be set manually
+    # example: date = '2016_02_02/'
+    # make sure include trailing slash
+    # check data folder to see for what dates data are available
+    date = '2017_11_24/'
+    if not os.path.exists(DATA_PATH + date):
+        raise Exception('desired date should be specified for loading saved data.') 
+
+    phy_q_filepath = DATA_PATH + date + PHYSICIAN_Q
+    mdp_q_filepath = DATA_PATH + date + MDP_OPTIMAL_Q
+    irl_phy_q_greedy_filepath = DATA_PATH + date + IRL_PHYSICIAN_Q_GREEDY
+    irl_phy_q_stochastic_filepath = DATA_PATH + date + IRL_PHYSICIAN_Q_STOCHASTIC
+    irl_mdp_q_greedy_filepath = DATA_PATH + date + IRL_MDP_Q_GREEDY
+    irl_mdp_q_stochastic_filepath = DATA_PATH + date + IRL_MDP_Q_STOCHASTIC
+
     # this will be appened to the plot filenames
     # all the plots will be saved to img/
-    plot_phy_suffix = 'physician_test_1'
-    plot_mdp_suffix = 'mdp_test_1'
-    test_against_expert(df_train, PHYSICIAN_Q, IRL_PHYSICIAN_Q, plot_phy_suffix)
-    test_against_expert(df_train, MDP_OPTIMAL_Q, IRL_MDP_Q, plot_mdp_suffix)
+    plot_phy_greedy_id = 'physician_greedy'
+    plot_mdp_greedy_id = 'mdp_greedy'
+    plot_phy_stochastic_id = 'physician_stochastic'
+    plot_mdp_stochastic_id = 'mdp_stochastic'
+    test_against_expert(df_train, phy_q_filepath, irl_phy_q_greedy_filepath, plot_phy_greedy_id)
+    test_against_expert(df_train, phy_q_filepath, irl_phy_q_stochastic_filepath, plot_phy_greedy_id)
+    test_against_expert(df_train, mdp_q_filepath, irl_mdp_q_greedy_filepath, plot_mdp_greedy_id)
+    test_against_expert(df_train, mdp_q_filepath, irl_mdp_q_stochastic_filepath,
+                        plot_mdp_stochastic_id)
