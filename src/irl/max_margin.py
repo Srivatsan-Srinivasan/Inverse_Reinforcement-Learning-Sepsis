@@ -20,9 +20,14 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
     described in Apprenticeship Learning paper (Abbeel and Ng, 2002)
     with Quadratic Programming
     returns:
-        margins = np.zeros((num_trials, num_iterations))
-        dist_mus = np.zeros((num_trials, num_iterations))
-        v_pis = np.zeros((num_trials, num_iterations))
+           {'margins': margins,
+           'dist_mus': dist_mus,
+           'v_pis': v_pis,
+           'v_pi_expert': v_pi_expert,
+           'svm_penlaty': svm_penalty,
+           'svm_epsilon': svm_epsilon,
+           'num_exp_trajectories': num_exp_trajectories,
+           'approx_exp_policy': approx_exp_policy}
     '''
     
     mu_pi_expert, v_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_expert)

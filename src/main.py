@@ -25,9 +25,10 @@ if __name__ == '__main__':
     # loading the whole data
     # TODO: load only training data
     # TODO: build training_mdp, test_mdp (IRL: model-based)
-    df, df_cleansed, df_centroids = load_data()
+    df_train, df_val, df_centroids = load_data()
+
     feature_columns = df_centroids.columns
-    trajectories = extract_trajectories(df_cleansed, NUM_PURE_STATES)
+    trajectories = extract_trajectories(df_train, NUM_PURE_STATES)
     trajectory_ids = trajectories[:, 0]
     num_exp_trajectories = np.unique(trajectories[:, 0]).shape[0]
     
@@ -52,12 +53,13 @@ if __name__ == '__main__':
         print('')
 
     # initialize max margin irl stuff
-    sample_initial_state = make_initial_state_sampler(df_cleansed)
+    sample_initial_state = make_initial_state_sampler(df_train)
     get_state = make_state_centroid_finder(df_centroids, feature_columns)
     phi = make_phi(df_centroids)
 
     # extract empirical expert policy
-    pi_expert = get_physician_policy(trajectories)
+    pi_expert_g = get_physician_policy(trajectories, is_stochastic=False)
+    pi_expert_s = get_physician_policy(trajectories, is_stochastic=True)
     experiment_id= 'maxmargin_empirical_expert'
     run_max_margin(transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, get_state, phi,

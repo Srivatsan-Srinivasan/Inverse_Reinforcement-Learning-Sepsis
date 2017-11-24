@@ -64,7 +64,8 @@ class GreedyPolicy:
         return np.copy(self._Q)
     
     def query_Q_probs(self, s=None, a=None):
-        Q_probs = self._Q / np.sum(self._Q, axis=1)
+        Q = self._Q - np.min(self._Q, axis=1)
+        Q_probs = Q / np.sum(Q, axis=1)
         if s is None and a is None:
             return Q_probs
         elif a is None:
@@ -102,8 +103,15 @@ class StochasticPolicy:
         # support read-only
         return np.copy(self._Q)
 
-    def query_Q_probs(self, s=None, a=None):
-        Q_probs = self._Q / np.sum(self._Q, axis=1)
+    def query_Q_probs(self, s=None, a=None, laplacian_smoothing=False):
+        if laplacian_smoothing:
+            LAPLACIAN_PROB = 0.01
+            L = np.max(self._Q, axis=1) * LAPLACIAN_PROB
+            Q = self._Q - np.min(self._Q, axis=1) + L
+            #probs = np.random.dirichlet(alphas, size=1)[0]
+            Q_probs = Q / np.sum(Q, axis=1)
+        else:
+            Q_probs = self._Q - np.min(self._Q, axis=1)
         if s is None and a is None:
             return Q_probs
         elif a is None:
@@ -112,23 +120,15 @@ class StochasticPolicy:
             return Q_probs[s, a]
     
     # L - Laplace smoother
-    def get_stochastic_actions(self, L= -1):        
-        for s in range(len(self._Q)):
-            if L == -1:
-                np.max(self._Q[s, :]) * 0.01
-            # make min Q(s,a) = 0 (e.g. -3 - (-3) = 0)
-            alphas = self._Q[s,:] - np.min(self._Q[s, :]) + L
-            probs = np.random.dirichlet(alphas, size=1)[0]
-            self.opt_actions[s] = probs
-        return self.opt_actions        
+    #def get_stochastic_actions(self, laplacian_smoothing=False):
+    #        alphas = self._Q[s,:] - np.min(self._Q[s, :]) + L
+    #        probs = np.random.dirichlet(alphas, size=1)[0]
+    #        self.opt_actions[s] = probs
+    #    return self.opt_actions
 
     #L - Laplace Smoother to have non-zero probability.
-    def choose_action(self, s, L = -1):
-        if L == -1:
-            np.max(self._Q[s, :]) * 0.01 
-        # make min Q(s,a) = 0 (e.g. -3 - (-3) = 0)
-        alphas = self._Q[s,:] - np.min(self._Q[s, :]) + L
-        probs = np.random.dirichlet(alphas, size=1)[0]
+    def choose_action(self, s, laplacian_smoothing=False):
+        probs = self.query_Q_probs(s, laplacian_smoothing=laplacian_smoothing)
         return np.random.choice(len(probs), p=probs)
 
     def update_Q_val(self, s, a, val):
