@@ -3,6 +3,8 @@ src/data/**/*.csv
 src/data/**/transition_matrix*
 src/data/transition_matrix*
 src/data/backup/transition_matrix*
+large_files.txt
+-tree 7959887
 
 # Byte-compiled / optimized / DLL files
 **/*.pyc
