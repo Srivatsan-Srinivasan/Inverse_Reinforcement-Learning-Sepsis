@@ -89,7 +89,7 @@ def test_code():
 def sumzip(*items):
     return [sum(values) for values in zip(*items)]
 
-def plot_KL(KL, save_path, show = True, test = True, plot_suffix=''):
+def plot_KL(KL, save_path, plot_suffix, iter_num, show = True, test = True):
     KL_IRL = []
     KL_random = []
     KL_vaso_random = []
@@ -102,6 +102,7 @@ def plot_KL(KL, save_path, show = True, test = True, plot_suffix=''):
         KL_no_int.append(KL[state]["no_int_policy"])
         KL_vaso_random.append(KL[state]["vaso_only_random"])
         KL_iv_random.append(KL[state]["iv_only_random"])
+    fig = plt.figure(figsize=(10, 10))
     plt.bar(keys,KL_IRL,color = 'b',label="IRL")
     plt.bar(keys,KL_random,bottom = sumzip(KL_IRL), color = 'r', label = "Random")
     plt.bar(keys,KL_no_int,bottom = sumzip(KL_IRL,KL_random), color = 'y', label = "No intervnetion")
@@ -112,13 +113,13 @@ def plot_KL(KL, save_path, show = True, test = True, plot_suffix=''):
         test_str = "test"
     plt.title("KL divergences with respect to physician policy in " + test_str + " data" )
     plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    fig.savefig('{}kl_{}_i{}'.format(save_path, plot_suffix, iter_num), ppi=300, bbox_inches='tight')
     if show:
         plt.show()
     else:
         return plt
-    plt.savefig('{}kl_{}'.format(save_path, plot_suffix), ppi=300, bbox_inches='tight')
-
-def plot_avg_LL(LL, save_path, show = True, test = True, plot_suffix=''):
+    plt.close()
+def plot_avg_LL(LL, save_path, plot_suffix, iter_num, show = True, test = True):
     keys = list(LL.keys())
     key_len = len(keys)
     
@@ -131,6 +132,7 @@ def plot_avg_LL(LL, save_path, show = True, test = True, plot_suffix=''):
         NLL_random.append(-1 * LL[keys[p]]["random"])
         NLL_no_int.append(-1 * LL[keys[p]]["no_int"])
     
+    fig = plt.figure(figsize=(10, 10))
 #    plt.bar("IRL", np.mean(LL_IRL), color = 'b', label="IRL")
 #    plt.bar("Random", np.mean(LL_random), color = 'g', label = "Random")
 #    plt.bar("No intervention", np.mean(LL_no_int), color = 'r', label = "No Intervention")
@@ -147,7 +149,8 @@ def plot_avg_LL(LL, save_path, show = True, test = True, plot_suffix=''):
     data_NLL.columns = ["IRL", "Random", "No_Intervention"]
     sns.barplot(data=data_NLL, estimator=mean)
     #plot.title("Plot showing average negative LL")
+    fig.savefig('{}ll_{}_i{}'.format(save_path, plot_suffix, iter_num), ppi=300, bbox_inches='tight')
     plt.show()
-    plt.savefig('{}ll_{}'.format(save_path, plot_suffix), ppi=300, bbox_inches='tight')
+    plt.close()
 
 
