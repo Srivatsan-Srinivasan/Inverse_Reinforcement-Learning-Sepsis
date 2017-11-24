@@ -5,8 +5,10 @@ import math
 import pdb
 import matplotlib.pyplot as plt
 import seaborn as sns
+sns.set(style='dark', palette='husl')
 from numpy import mean
 import pandas as pd
+from constants import IMG_PATH
 
 #p,q are distributions - p is base distribution and q is approximate
 def KL_divergence(p,q):
@@ -28,7 +30,6 @@ def gen_random_probability(num_actions = 25, epsilon = 0.001, random_action_rang
             return 1/len(random_action_range)
         else:
             return epsilon
-    #pdb.set_trace()           
     out = [assign(x,random_action_range) for x in range(num_actions)]
     out = np.array(out)/np.round(sum(out),3)
   
@@ -45,7 +46,6 @@ def log_likelihood(prob_actions, target_actions,avg = False ):
     out = 0
     #SANITY checks.
     assert(len(prob_actions) == len(target_actions))
-    #pdb.set_trace()
     #assert(len(prob_actions[0]) == 25)
     
     for i in range(len(target_actions)):
@@ -89,7 +89,7 @@ def test_code():
 def sumzip(*items):
     return [sum(values) for values in zip(*items)]
 
-def plot_KL(KL, show = True, test = True):
+def plot_KL(KL, show = True, test = True, plot_suffix=''):
     KL_IRL = []
     KL_random = []
     KL_vaso_random = []
@@ -102,7 +102,6 @@ def plot_KL(KL, show = True, test = True):
         KL_no_int.append(KL[state]["no_int_policy"])
         KL_vaso_random.append(KL[state]["vaso_only_random"])
         KL_iv_random.append(KL[state]["iv_only_random"])
-    import pdb;pdb.set_trace() 
     plt.bar(keys,KL_IRL,color = 'b',label="IRL")
     plt.bar(keys,KL_random,bottom = sumzip(KL_IRL), color = 'r', label = "Random")
     plt.bar(keys,KL_no_int,bottom = sumzip(KL_IRL,KL_random), color = 'y', label = "No intervnetion")
@@ -117,8 +116,9 @@ def plot_KL(KL, show = True, test = True):
         plt.show()
     else:
         return plt
+    plt.savefig('{}kl_{}'.format(IMG_PATH, plot_suffix), ppi=300, bbox_inches='tight')
 
-def plot_avg_LL(LL,show = True, test = True):
+def plot_avg_LL(LL,show = True, test = True, plot_suffix=''):
     keys = list(LL.keys())
     key_len = len(keys)
     
@@ -131,7 +131,6 @@ def plot_avg_LL(LL,show = True, test = True):
         NLL_random.append(-1 * LL[keys[p]]["random"])
         NLL_no_int.append(-1 * LL[keys[p]]["no_int"])
     
-    pdb.set_trace()
 #    plt.bar("IRL", np.mean(LL_IRL), color = 'b', label="IRL")
 #    plt.bar("Random", np.mean(LL_random), color = 'g', label = "Random")
 #    plt.bar("No intervention", np.mean(LL_no_int), color = 'r', label = "No Intervention")
@@ -144,11 +143,11 @@ def plot_avg_LL(LL,show = True, test = True):
 #        plt.show()
 #    else:
 #        return plt
-    pdb.set_trace()
     data_NLL = pd.DataFrame(np.transpose(np.matrix([NLL_IRL,NLL_random,NLL_no_int])))
     data_NLL.columns = ["IRL", "Random", "No_Intervention"]
     sns.barplot(data=data_NLL, estimator=mean)
     #plot.title("Plot showing average negative LL")
     plt.show()
+    plt.savefig('{}ll_{}'.format(IMG_PATH, plot_suffix), ppi=300, bbox_inches='tight')
 
 

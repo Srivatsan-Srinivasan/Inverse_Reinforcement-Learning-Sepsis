@@ -64,8 +64,11 @@ class GreedyPolicy:
         return np.copy(self._Q)
     
     def query_Q_probs(self, s=None, a=None):
-        Q = self._Q - np.min(self._Q, axis=1)
-        Q_probs = Q / np.sum(Q, axis=1)
+        Q_probs = np.zeros(self._Q.shape).astype(np.float)
+        for s in range(self._Q.shape[0]):
+            ties = np.flatnonzero(self._Q[s, :] == self._Q[s, :].max())
+            a = np.random.choice(ties)
+            Q_probs[s, a] = 1.0
         if s is None and a is None:
             return Q_probs
         elif a is None:
@@ -112,26 +115,19 @@ class StochasticPolicy:
             LAPLACIAN_SMOOTHER = 0.01
             L = (np.max(self._Q, axis=1) - np.min(self._Q, axis=1))* LAPLACIAN_SMOOTHER
             Q = self._Q - np.expand_dims(np.min(self._Q, axis=1) - L, axis=1)
-            #probs = np.random.dirichlet(alphas, size=1)[0]
-            Q_probs = Q / np.expand_dims(np.sum(Q, axis=1), axis=1)
         else:
-            Q_probs = self._Q - np.min(self._Q, axis=1)
+            Q = self._Q - np.expand_dims(np.min(self._Q, axis=1), axis=1)
+        Q_probs = Q / np.expand_dims(np.sum(Q, axis=1), axis=1)
+
         if s is None and a is None:
             return Q_probs
         elif a is None:
             return Q_probs[s, :]
         else:
             return Q_probs[s, a]
-    
-    # L - Laplace smoother
-    #def get_stochastic_actions(self, laplacian_smoothing=False):
-    #        alphas = self._Q[s,:] - np.min(self._Q[s, :]) + L
-    #        probs = np.random.dirichlet(alphas, size=1)[0]
-    #        self.opt_actions[s] = probs
-    #    return self.opt_actions
 
-    #L - Laplace Smoother to have non-zero probability.
-    def choose_action(self, s, laplacian_smoothing=False):
+
+    def choose_action(self, s, laplacian_smoothing=True):
         probs = self.query_Q_probs(s, laplacian_smoothing=laplacian_smoothing)
         return np.random.choice(len(probs), p=probs)
 

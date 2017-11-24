@@ -49,7 +49,7 @@ def max_margin_learner(task, NUM_STATES, NUM_ACTIONS, transition_matrix, reward_
     # mu_pi_star = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_star)
 
     # step 1: initialize pi_tilda and mu_pi_tilda
-    pi_tilda = RandomPolicy(NUM_STATES, NUM_ACTIONS)
+    pi_tilda = RandomPolicy(NUM_PURE_STATES, NUM_ACTIONS)
     mu_pi_tilda = estimate_feature_expectation(task, transition_matrix,
                                                        sample_initial_state,
                                                        get_state, phi, pi_tilda)

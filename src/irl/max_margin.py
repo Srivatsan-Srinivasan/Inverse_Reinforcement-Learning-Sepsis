@@ -42,13 +42,15 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
     v_pis = np.zeros((num_trials, num_iterations))
     intermediate_reward_matrix = np.zeros((reward_matrix.shape))
     approx_exp_policies = np.array([None] * num_trials)
+    approx_exp_weights = np.array([None] * num_trials)
+    
 
     for trial_i in tqdm(range(num_trials)):
         if verbose:
             print('max margin IRL starting ... with {}th trial'.format(1+trial_i))
 
         # step 1: initialize pi_tilda and mu_pi_tilda
-        pi_tilda = RandomPolicy(NUM_STATES, NUM_ACTIONS)
+        pi_tilda = RandomPolicy(NUM_PURE_STATES, NUM_ACTIONS)
         mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(transition_matrix,
                                                            sample_initial_state,
                                                            get_state, phi, pi_tilda)
@@ -56,9 +58,11 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         best_actions_old = None
         W_old = None
         pi_tildas = np.array([None]*num_iterations)
+        weights = np.array([None]*num_iterations)
         for i in range(num_iterations):
             # step 2: solve qp
             W, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
+            weights[i] = W
             # step 3: terminate if margin <= epsilon
             if converged:
                 print('margin coverged with', margin)
@@ -68,7 +72,7 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
             compute_reward = make_reward_computer(W, get_state, phi)
             reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
             Q_star = Q_value_iteration(transition_matrix, reward_matrix)
-            pi_tilda = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_star)
+            pi_tilda = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
             pi_tildas[i] = pi_tilda
             # step 5: estimate mu pi tilda
             mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(
@@ -106,8 +110,15 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         # find a near-optimal policy from a policy reservoir
         # taken from Abbeel (2004)
         # TODO: retrieve near-optimal expert policy
-        approx_exp_policies[trial_i] = pi_tildas[np.argmin(margins[trial_i])].Q
+        min_margin_iter_idx = np.argmin(margins[trial_i])
+        approx_exp_weights[trial_i] = weights[min_margin_iter_idx]
+        approx_exp_policies[trial_i] = pi_tildas[min_margin_iter_idx].Q
+        if verbose:
+            print('best weights at {}th trial'.format(trial_i), weights[min_margin_iter_idx])
+            print('best Q at {}th trial'.format(trial_i), pi_tildas[min_margin_iter_idx].Q)
+
     # TODO: fix this
+    approx_expert_weights = np.mean(approx_exp_weights, axis=0)
     approx_expert_Q = np.mean(approx_exp_policies, axis=0)
     #approx_exp_policy = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, approx_exp_policy_Q)
     results = {'margins': margins,
@@ -116,13 +127,15 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
                'v_pi_expert': v_pi_expert,
                'svm_penlaty': svm_penalty,
                'svm_epsilon': svm_epsilon,
+               'approx_expert_weights': approx_expert_weights,
                'num_exp_trajectories': num_exp_trajectories,
-               'approx_expert_Q': approx_expert_Q}
+               'approx_expert_Q': approx_expert_Q
+              }
     return results
 
 
 def run_max_margin(transition_matrix, reward_matrix, pi_expert,
-                       sample_initial_state, get_state, phi,
+                    sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
                    num_iterations, num_trials, experiment_id, verbose):
     '''
@@ -134,9 +147,13 @@ def run_max_margin(transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
                        num_iterations, num_trials, verbose)
-    np.save(DATA_PATH + experiment_id, res)
+    np.save('{}{}_i{}_result'.format(DATA_PATH, experiment_id, num_iterations), res)
+    np.save('{}{}_i{}_weights'.format(DATA_PATH, experiment_id, num_iterations),
+            res['approx_expert_weights'])
+
     plot_margin_expected_value(res['margins'], num_iterations, experiment_id)
     plot_diff_feature_expectation(res['dist_mus'], num_iterations, experiment_id)
+    # TODO: this is not really a good measure of policy performance
     plot_value_function(res['v_pis'], res['v_pi_expert'], num_iterations, experiment_id)
 
     return res['approx_expert_Q']
