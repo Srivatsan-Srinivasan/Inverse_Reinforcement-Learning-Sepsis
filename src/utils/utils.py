@@ -1,4 +1,5 @@
-import os
+import os, errno
+import datetime
 import numpy as np
 import numba as nb
 import pandas as pd
@@ -24,9 +25,9 @@ def save_data(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
 
-def save_Q(Q, path):
+def save_Q(Q, save_path, data_name):
     # TODO: check for instance of class and make sure to save Q instead of an instance
-    np.save(path, Q)
+    np.save('{}{}_Q'.format(save_path, data_name), Q)
     
 def load_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES
@@ -73,7 +74,16 @@ def _load_data(path):
     df[valid_int_cols].astype(np.int)
     return df
 
-
+def initialize_save_data_folder():
+    date = datetime.datetime.now().strftime('%Y_%m_%d')
+    save_path = DATA_PATH + date + '/'
+    try:
+        os.makedirs(save_path)
+        os.makedirs(save_path + IMG_PATH)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise Exception('could not initialize save data folder')
+    return save_path
 
 def extract_trajectories(df, num_states, trajectory_filepath):
     if os.path.isfile(trajectory_filepath):

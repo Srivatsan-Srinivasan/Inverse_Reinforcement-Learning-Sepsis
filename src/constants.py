@@ -32,10 +32,14 @@ VALIDATE_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_val.npy'
 VALIDATE_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_val.npy'
 VALIDATE_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table_val.npy'
 
-PHYSICIAN_Q = DATA_PATH + 'physician_q.npy'
-MDP_OPTIMAL_Q = DATA_PATH + 'mdp_optimal_q.npy'
-IRL_PHYSICIAN_Q = DATA_PATH + 'irl_physician_q.npy'
-IRL_MDP_Q = DATA_PATH + 'irl_mdp_q.npy'
+# since these are experiment-specific, we save them to
+# save_path = data/today_date/
+PHYSICIAN_Q = 'physician_q'
+MDP_OPTIMAL_Q = 'mdp_optimal_q'
+IRL_PHYSICIAN_Q_GREEDY = 'irl_physician_q_greedy'
+IRL_PHYSICIAN_Q_STOCHASTIC ='irl_physician_q_stochastic'
+IRL_MDP_Q_GREEDY = 'irl_mdp_q_greedy'
+IRL_MDP_Q_STOCHASTIC = 'irl_mdp_q_stochastic'
 
 Q_STAR_FILEPATH = DATA_PATH + 'q_star.npy'
 Q_CLINICIAN_FILEPATH = DATA_PATH + 'q_clinician.npy'

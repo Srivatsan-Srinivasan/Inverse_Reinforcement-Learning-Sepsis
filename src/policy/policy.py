@@ -89,7 +89,6 @@ class GreedyPolicy:
     def update_Q_val(self, s, a, val):
         self._Q[s,a] = val
 
-
 class StochasticPolicy:
     def __init__(self, num_states, num_actions, Q=None):
         if Q is None:
@@ -99,7 +98,6 @@ class StochasticPolicy:
             # in case we want to import e-greedy
             # make Q non negative to be useful as probs
             self._Q = Q
-        #self.opt_actions = np.ones((num_states, num_actions)) * -1
 
     @property
     def Q(self):
@@ -117,7 +115,13 @@ class StochasticPolicy:
             Q = self._Q - np.expand_dims(np.min(self._Q, axis=1) - L, axis=1)
         else:
             Q = self._Q - np.expand_dims(np.min(self._Q, axis=1), axis=1)
-        Q_probs = Q / np.expand_dims(np.sum(Q, axis=1), axis=1)
+        Q_sum = np.sum(Q, axis=1)
+        # if zero, we give uniform probs with some gaussian noise
+        num_actions = self._Q.shape[1]
+        Q[Q_sum==0, :] = 1.
+        Q_sum[Q_sum==0] = num_actions
+        Q_probs = Q / np.expand_dims(Q_sum, axis=1)
+        Q_probs[Q_sum==0, :] += np.random.normal(0, 1e-4, num_actions)
 
         if s is None and a is None:
             return Q_probs
@@ -133,7 +137,6 @@ class StochasticPolicy:
 
     def update_Q_val(self, s, a, val):
         self._Q[s,a] = val
-
 
 class RandomPolicy:
     def __init__(self, num_states, num_actions):

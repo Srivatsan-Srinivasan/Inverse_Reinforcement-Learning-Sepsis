@@ -89,7 +89,7 @@ def test_code():
 def sumzip(*items):
     return [sum(values) for values in zip(*items)]
 
-def plot_KL(KL, show = True, test = True, plot_suffix=''):
+def plot_KL(KL, save_path, show = True, test = True, plot_suffix=''):
     KL_IRL = []
     KL_random = []
     KL_vaso_random = []
@@ -116,9 +116,9 @@ def plot_KL(KL, show = True, test = True, plot_suffix=''):
         plt.show()
     else:
         return plt
-    plt.savefig('{}kl_{}'.format(IMG_PATH, plot_suffix), ppi=300, bbox_inches='tight')
+    plt.savefig('{}kl_{}'.format(save_path, plot_suffix), ppi=300, bbox_inches='tight')
 
-def plot_avg_LL(LL,show = True, test = True, plot_suffix=''):
+def plot_avg_LL(LL, save_path, show = True, test = True, plot_suffix=''):
     keys = list(LL.keys())
     key_len = len(keys)
     
@@ -148,6 +148,6 @@ def plot_avg_LL(LL,show = True, test = True, plot_suffix=''):
     sns.barplot(data=data_NLL, estimator=mean)
     #plot.title("Plot showing average negative LL")
     plt.show()
-    plt.savefig('{}ll_{}'.format(IMG_PATH, plot_suffix), ppi=300, bbox_inches='tight')
+    plt.savefig('{}ll_{}'.format(save_path, plot_suffix), ppi=300, bbox_inches='tight')
 
 
