@@ -28,10 +28,13 @@ def _make_mdp(trajectories, num_states, num_actions):
     transition_matrix = np.zeros((num_states, num_actions, num_states))
     reward_matrix = np.zeros((num_states, num_actions))
     # stochastic world: 1% of uncertainty in transition
-    eps = 1e-2
-    TRANSITION_PROB_UNVISITED_SAS = eps / num_states
+    #eps = 1e-2
+    eps =  0
+    #TRANSITION_PROB_UNVISITED_SAS = eps / num_states
+    TRANSITION_PROB_UNVISITED_SAS = 0
     # if (s, a) never observed, we naively assume uniform transition
-    TRANSITION_PROB_UNVISITED_SA = 1.0 / num_states
+    #TRANSITION_PROB_UNVISITED_SA = 1.0 / num_states
+    TRANSITION_PROB_UNVISITED_SA = 0
     REWARD_UNVISITED_SA = 0.0
 
     # create dataframe for easy tallying
@@ -55,13 +58,14 @@ def _make_mdp(trajectories, num_states, num_actions):
         for a in range(num_actions):
             # store empirical reward
             if (s, a) in avg_reward_sa:
-                reward_matrix[s, a] = avg_reward_sa[(s, a)]
+                #reward_matrix[s, a] = avg_reward_sa[(s, a)]
+                reward_matrix[s, a] = REWARD_UNVISITED_SA
             else:
                 reward_matrix[s, a] = REWARD_UNVISITED_SA
             # store empirical transitions
             if (s, a) in transition_count_sa:
                 # give small trans. prob to every next state
-                transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SAS
+                #transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SAS
                 num_sa = transition_count_sa[(s, a)]
                 for new_s in range(num_states):
                     i+=1
@@ -69,10 +73,12 @@ def _make_mdp(trajectories, num_states, num_actions):
                         print('patience is a virtue. state: {}'.format(s, a))
                     if (s, a, new_s) in transition_count_sas:
                         num_sas = transition_count_sas[(s, a, new_s)]
-                        transition_matrix[s, a, new_s] += (1 - eps)*num_sas / num_sa
+                        #transition_matrix[s, a, new_s] += (1 - eps)*num_sas / num_sa
+                        transition_matrix[s, a, new_s] = num_sas / num_sa
             else:
                 # if (s, a) never observed, we naively assume uniform transition
-                transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SA
+                #transition_matrix[s, a, :] = TRANSITION_PROB_UNVISITED_SA
+                transition_matrix[s, a, s] = 1.0
 
     return transition_matrix, reward_matrix
 

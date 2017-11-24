@@ -24,8 +24,9 @@ def save_data(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
 
-def save_policy(policy, path):
-    np.save(path, policy)
+def save_Q(Q, path):
+    # TODO: check for instance of class and make sure to save Q instead of an instance
+    np.save(path, Q)
     
 def load_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES

@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Nov 22 12:20:13 2017
-
-@author: SrivatsanPC
-"""
 from sklearn.metrics import mutual_info_score as mis
 from scipy.stats import entropy
 import numpy as np
@@ -108,7 +102,7 @@ def plot_KL(KL, show = True, test = True):
         KL_no_int.append(KL[state]["no_int_policy"])
         KL_vaso_random.append(KL[state]["vaso_only_random"])
         KL_iv_random.append(KL[state]["iv_only_random"])
-        
+    import pdb;pdb.set_trace() 
     plt.bar(keys,KL_IRL,color = 'b',label="IRL")
     plt.bar(keys,KL_random,bottom = sumzip(KL_IRL), color = 'r', label = "Random")
     plt.bar(keys,KL_no_int,bottom = sumzip(KL_IRL,KL_random), color = 'y', label = "No intervnetion")
@@ -153,14 +147,8 @@ def plot_avg_LL(LL,show = True, test = True):
     pdb.set_trace()
     data_NLL = pd.DataFrame(np.transpose(np.matrix([NLL_IRL,NLL_random,NLL_no_int])))
     data_NLL.columns = ["IRL", "Random", "No_Intervention"]
-    plot = sns.barplot(data=data_NLL, estimator=mean)
-    plot.title("Plot showing average negative LL")
-    plot.show()
-    pdb.set_trace()
-    assert(True)
-        
-test_code()
-    
-    
+    sns.barplot(data=data_NLL, estimator=mean)
+    #plot.title("Plot showing average negative LL")
+    plt.show()
 
 

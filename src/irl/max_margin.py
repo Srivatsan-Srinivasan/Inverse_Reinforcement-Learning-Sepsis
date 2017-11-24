@@ -29,7 +29,6 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
            'num_exp_trajectories': num_exp_trajectories,
            'approx_exp_policy': approx_exp_policy}
     '''
-    
     mu_pi_expert, v_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_expert)
     if verbose:
         print('objective: get close to ->')
@@ -108,8 +107,9 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
         # taken from Abbeel (2004)
         # TODO: retrieve near-optimal expert policy
         approx_exp_policies[trial_i] = pi_tildas[np.argmin(margins[trial_i])].Q
-    
-    approx_exp_policy = np.mean(approx_exp_policies, axis=0)
+    # TODO: fix this
+    approx_expert_Q = np.mean(approx_exp_policies, axis=0)
+    #approx_exp_policy = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, approx_exp_policy_Q)
     results = {'margins': margins,
                'dist_mus': dist_mus,
                'v_pis': v_pis,
@@ -117,7 +117,7 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
                'svm_penlaty': svm_penalty,
                'svm_epsilon': svm_epsilon,
                'num_exp_trajectories': num_exp_trajectories,
-               'approx_exp_policy': approx_exp_policy}
+               'approx_expert_Q': approx_expert_Q}
     return results
 
 
@@ -139,4 +139,4 @@ def run_max_margin(transition_matrix, reward_matrix, pi_expert,
     plot_diff_feature_expectation(res['dist_mus'], num_iterations, experiment_id)
     plot_value_function(res['v_pis'], res['v_pi_expert'], num_iterations, experiment_id)
 
-    return res['approx_exp_policy']
+    return res['approx_expert_Q']
