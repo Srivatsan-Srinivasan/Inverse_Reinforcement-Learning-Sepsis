@@ -73,7 +73,9 @@ def plot_value_function(v_pis, v_pi_expert, num_iterations, plot_prefix='new'):
     avg_v_pis = np.mean(v_pis, axis=0)
     v_pi_se = sem(v_pis, axis=0)
     fig = plt.figure(figsize=(10, 10))
-    plt.ylim((np.min(avg_v_pis)*.8, np.max(avg_v_pis)*1.2))
+    min_ylim = np.min([np.min(avg_v_pis), v_pi_expert])
+    max_ylim = np.max([np.max(avg_v_pis), v_pi_expert])
+    plt.ylim((min_ylim*.8, max_ylim*1.2))
     plt.errorbar(np.arange(1, num_iterations+1), avg_v_pis, yerr=v_pi_se,
                  fmt='-o', label=r'$E_{s_0 \sim D(s)}[V^{\tilde \pi}(s_0)]$')
     plt.axhline(v_pi_expert, label=r'$E_{s_0 \sim D(s)}[V^{\pi_E}(s_0)]$', c='c')

@@ -137,6 +137,7 @@ def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
     v_old = np.zeros((num_states))
     for t in itertools.count():
         Q = reward_matrix + transition_matrix.dot(gamma * v_old)
+        # if we want tie breaking
         #v = np.zeros(num_states)
         #for s in range(num_states):
         #    # evaluate this policy's action choices

@@ -1,10 +1,4 @@
 import numpy as np
-from copy import deepcopy
-
-#TODO: add logger
-#import logging
-#logger = logging.getLogger(__name__)
-
 from utils.utils import load_data, extract_trajectories, save_Q
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
 from policy.custom_policy import get_physician_policy
@@ -13,13 +7,12 @@ from mdp.solver import Q_value_iteration, iterate_policy
 from irl.max_margin import run_max_margin
 from irl.irl import  make_state_centroid_finder, make_phi, make_initial_state_sampler
 from constants import *
-from irl.max_margin_gridworld import max_margin_learner
 
 
 if __name__ == '__main__':
     # set hyperparams here
-    num_trials = 2
-    num_iterations = 10
+    num_trials = 10
+    num_iterations = 2
     svm_penalty = 300.0
     svm_epsilon = 0.01
     verbose = True
@@ -45,9 +38,6 @@ if __name__ == '__main__':
     # adjust rmax, rmin to keep w^Tphi(s) <= 1
     reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(len(feature_columns))
     reward_matrix[TERMINAL_STATE_DEAD]  = -np.sqrt(len(feature_columns))
-    ## make r(s, a) -> r(s)
-    ## r(s) = E_pi_uniform[r(s,a)]
-    #reward_matrix = np.mean(reward_matrix, axis=1)
 
     # check irl/max_margin for implementation
     if verbose:
@@ -66,24 +56,24 @@ if __name__ == '__main__':
     phi = make_phi(df_centroids)
 
     # extract empirical expert policy
-    #pi_expert_phy = get_physician_policy(trajectories, is_stochastic=False)
-    #pi_expert_phy = get_physician_policy(trajectories, is_stochastic=True)
-    #save_Q(pi_expert_phy.Q, PHYSICIAN_Q)
+    pi_expert_phy = get_physician_policy(trajectories, is_stochastic=False)
+    pi_expert_phy = get_physician_policy(trajectories, is_stochastic=True)
+    save_Q(pi_expert_phy.Q, PHYSICIAN_Q)
 
-    #experiment_id= 'maxmargin_empirical_expert'
-    #irl_physician_Q = run_max_margin(transition_matrix, np.copy(reward_matrix), pi_expert_phy,
-    #                   sample_initial_state, get_state, phi,
-    #                   num_exp_trajectories, svm_penalty, svm_epsilon,
-    #               num_iterations, num_trials, experiment_id, verbose)
-    #save_Q(irl_physician_Q, IRL_PHYSICIAN_Q)
+    experiment_id= 'maxmargin_empirical_expert'
+    irl_physician_Q = run_max_margin(transition_matrix, np.copy(reward_matrix), pi_expert_phy,
+                       sample_initial_state, get_state, phi,
+                       num_exp_trajectories, svm_penalty, svm_epsilon,
+                   num_iterations, num_trials, experiment_id, verbose)
+    save_Q(irl_physician_Q, IRL_PHYSICIAN_Q)
+
     # extract artificial expert policy (optimal approximate MDP solution)
-    import pdb;pdb.set_trace()
     Q_star = Q_value_iteration(transition_matrix, np.copy(reward_matrix))
-    pi_expert_mdp = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_star)
+    pi_expert_mdp = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
     save_Q(pi_expert_mdp.Q, MDP_OPTIMAL_Q)
 
     experiment_id= 'maxmargin_mdp_expert'
-    irl_mdp_Q = run_max_margin(transition_matrix, reward_matrix, pi_expert_mdp,
+    irl_mdp_Q = run_max_margin(transition_matrix, np.copy(reward_matrix), pi_expert_mdp,
                        sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
                    num_iterations, num_trials, experiment_id, verbose)
