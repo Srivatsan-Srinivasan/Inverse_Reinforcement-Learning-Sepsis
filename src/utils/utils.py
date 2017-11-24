@@ -24,7 +24,9 @@ def save_data(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
 
-
+def save_policy(policy, path):
+    np.save(path, policy)
+    
 def load_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES
     if os.path.isfile(TRAIN_CLEANSED_DATA_FILEPATH) and os.path.isfile(VALIDATE_CLEANSED_DATA_FILEPATH):
@@ -72,13 +74,13 @@ def _load_data(path):
 
 
 
-def extract_trajectories(df, num_states):
-    if os.path.isfile(TRAJECTORIES_FILEPATH):
-        trajectories = np.load(TRAJECTORIES_FILEPATH)
+def extract_trajectories(df, num_states, trajectory_filepath):
+    if os.path.isfile(trajectory_filepath):
+        trajectories = np.load(trajectory_filepath)
     else:
         print('extract trajectories')
         trajectories = _extract_trajectories(df, num_states)
-        np.save(TRAJECTORIES_FILEPATH, trajectories)
+        np.save(trajectory_filepath, trajectories)
     trajectories = trajectories.astype(np.int)
     return trajectories
 
