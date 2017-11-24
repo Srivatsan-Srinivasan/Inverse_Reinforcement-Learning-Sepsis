@@ -76,6 +76,12 @@ class GreedyPolicy:
         ties = np.flatnonzero(self._Q[s, :] == self._Q[s, :].max())
         return np.random.choice(ties)
     
+    def get_opt_actions(self):
+        opt_actions = np.zeros(len(self._Q))
+        for i in range(len(opt_actions)):
+            opt_actions[i] = self.choose_action(i)
+        return opt_actions
+    
     def update_Q_val(self, s, a, val):
         self._Q[s,a] = val
 
@@ -89,6 +95,7 @@ class StochasticPolicy:
             # in case we want to import e-greedy
             # make Q non negative to be useful as probs
             self._Q = Q
+        self.opt_actions = np.ones((num_states, num_actions)) * -1
 
     @property
     def Q(self):
@@ -103,10 +110,24 @@ class StochasticPolicy:
             return Q_probs[s, :]
         else:
             return Q_probs[s, a]
+    
+    # L - Laplace smoother
+    def get_stochastic_actions(self, L= -1):        
+        for s in range(len(self._Q)):
+            if L == -1:
+                np.max(self._Q[s, :]) * 0.01
+            # make min Q(s,a) = 0 (e.g. -3 - (-3) = 0)
+            alphas = self._Q[s,:] - np.min(self._Q[s, :]) + L
+            probs = np.random.dirichlet(alphas, size=1)[0]
+            self.opt_actions[s] = probs
+        return self.opt_actions        
 
-    def choose_action(self, s):
+    #L - Laplace Smoother to have non-zero probability.
+    def choose_action(self, s, L = -1):
+        if L == -1:
+            np.max(self._Q[s, :]) * 0.01 
         # make min Q(s,a) = 0 (e.g. -3 - (-3) = 0)
-        alphas = self._Q[s,:] - np.min(self._Q[s, :])
+        alphas = self._Q[s,:] - np.min(self._Q[s, :]) + L
         probs = np.random.dirichlet(alphas, size=1)[0]
         return np.random.choice(len(probs), p=probs)
 
