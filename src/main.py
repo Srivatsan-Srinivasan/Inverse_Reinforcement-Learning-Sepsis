@@ -1,17 +1,18 @@
 import numpy as np
-from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder,
-apply_phi_to_centroids
+
+
+from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder, apply_phi_to_centroids
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
 from policy.custom_policy import get_physician_policy
 from mdp.builder import make_mdp
 from mdp.solver import Q_value_iteration, iterate_policy
 from irl.max_margin import run_max_margin
 from irl.irl import  make_state_centroid_finder, make_phi, make_initial_state_sampler
+from utils.plot import plot_margin_expected_value, plot_diff_feature_expectation, plot_value_function
 from constants import *
 
 # don't move this for now
 def plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
-    img_path = save_path + IMG_PATH
     plot_margin_expected_value(res['margins'], num_trials, num_iterations, img_path, experiment_id)
     plot_diff_feature_expectation(res['dist_mus'], num_trials, num_iterations, img_path, experiment_id)
     # TODO: this is not really a good measure of policy performance
@@ -21,8 +22,8 @@ def plot_experiment(res, save_path, num_trials, num_iterations, img_path, experi
 
 if __name__ == '__main__':
     # set hyperparams here
-    num_trials = 30
-    num_iterations = 30
+    num_trials = 2
+    num_iterations = 2
     svm_penalty = 300.0
     svm_epsilon = 1e-4
     irl_use_stochastic_policy = False
@@ -44,14 +45,15 @@ if __name__ == '__main__':
     # initialize max margin irl stuff
     # preprocess phi
     sample_initial_state = make_initial_state_sampler(df_train)
-    phi = apply_phi_to_centroids(df_centroids, as_matrix=True)
+    phi = apply_phi_to_centroids(df_centroids, df_train, as_matrix=True)
+    assert np.all(np.isin(phi, [0, 1])), 'phi should be binary matrix'
 
     # build reward_matrix (not change whether train/val)
-    feature_columns = df_phi.columns
+    feature_columns = phi.shape[1]
     reward_matrix = np.zeros((NUM_STATES))
     # adjust rmax, rmin to keep w^Tphi(s) <= 1
-    reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(len(feature_columns))
-    reward_matrix[TERMINAL_STATE_DEAD]  = -np.sqrt(len(feature_columns))
+    reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(feature_columns)
+    reward_matrix[TERMINAL_STATE_DEAD]  = -np.sqrt(feature_columns)
     assert(np.isclose(np.sum(reward_matrix), 0))
 
     #evaluate_policy_monte_carlo()
@@ -90,6 +92,7 @@ if __name__ == '__main__':
 
     # initalize saving folder
     save_path = initialize_save_data_folder()
+    img_path = save_path + IMG_PATH
     print('will save expriment results to {}'.format(save_path))
     #with open(save_path + 'experiment.txt', 'wb') as f:
     #    num_trials = 10
@@ -117,7 +120,7 @@ if __name__ == '__main__':
                             irl_use_stochastic_policy, verbose)
 
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_GREEDY)
-        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
 
     def experiment_2():
@@ -130,7 +133,7 @@ if __name__ == '__main__':
                                          num_iterations, num_trials, experiment_id,
                                         save_path, irl_use_stochastic_policy, verbose)
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_STOCHASTIC)
-        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
 
     def experiment_3():
@@ -147,7 +150,7 @@ if __name__ == '__main__':
                            num_iterations, num_trials, experiment_id,
                           save_path, irl_use_stochastic_policy, verbose)
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_MDP_Q_GREEDY)
-        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
 
     def experiment_4():
@@ -163,11 +166,11 @@ if __name__ == '__main__':
                            num_iterations, num_trials, experiment_id,
                            save_path, irl_use_stochastic_policy, verbose)
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_MDP_Q_STOCHASTIC)
-        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
     # here run the experiments
 
     experiment_1()
-    experiment_2()
+    #experiment_2()
     experiment_3()
-    experiment_4()
+    #experiment_4()

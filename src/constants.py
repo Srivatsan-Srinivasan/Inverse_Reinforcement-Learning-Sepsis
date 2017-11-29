@@ -86,16 +86,18 @@ CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 #COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX 
 # TODO: this does not make sense but will fix later
 # when we do clustering other than kmeans
-COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
 ETC = ['age', 'charttime']
-
+COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
+# NEW UPDATE TO MAKE IT COMPATIBLE WITH PHI(S)
+#BINARY_COLS = ['gender', 're_admission', 'sedation', 'mechvent', 'rrt', 'died_in_hosp', 'mortality_90d']
+#COLS_TO_BE_NORMALIZED = list(set(COLS_TO_BE_NORMALIZED) - set(BINARY_COLS))
 COLS_TO_BE_LOGGED=  ['SpO2','Glucose','BUN','Creatinine', 'SGOT', 'SGPT','Total_bili','WBC_count',
         'Platelets_count', 'PTT','PT','INR','paO2','paCO2','Arterial_lactate','PaO2_FiO2',
         'GCS', 'Shock_Index']
 
 ALREADY_NORMAL_LOGGED = list(set(COLS_TO_BE_NORMALIZED) - set(COLS_TO_BE_LOGGED))
 
-INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state', 'icustayid', 'bloc']
+INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state', 'icustayid']
 
 # gender, age, readmission, rrt, vent, sedation could be excluded
 COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc']

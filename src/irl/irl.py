@@ -29,7 +29,7 @@ def make_state_centroid_finder(df, columns=None):
     return f
 
 
-def estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi,
+def estimate_feature_expectation(transition_matrix, sample_initial_state, phi, pi,
                                  gamma=0.99, num_trajectories=300, max_iter=1000):
     '''
     estimate mu_pi and v_pi with monte carlo simulation

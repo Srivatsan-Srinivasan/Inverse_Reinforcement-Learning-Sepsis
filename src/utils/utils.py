@@ -329,36 +329,36 @@ def compute_terminal_state_reward(s, num_features):
         raise Exception('not recognizing this terminal state: '.foramt(s))
 
 
-def apply_phi_to_centroids(df_cent, as_matrix=False):
+def apply_phi_to_centroids(df_cent, df_train, as_matrix=False):
     '''
+    phi criteria are learned from df_trani
     convert centroid values into quartile-based bins
     create dummy variable so every column is one or zero
     '''
-	criteria = df_train.describe().loc[['min', '25%', '50%', '75%', 'max']]
-	# pandas cut does not see to support vectorize version
-	df_cent.head()
-	binned_columns = []
+    criteria = df_train.describe().loc[['min', '25%', '50%', '75%', 'max']]
+    # pandas cut does not see to support vectorize version
+    binned_columns = []
 
-	for c in df_cent:
-		uniq_edges = np.unique(criteria[c].tolist())
-		if len(uniq_edges) == 2:
-			# it must be binary variables
-			# shift the edge to the left a bit
-			uniq_edges = uniq_edges - 1e-5
-			# add a new edge
-			uniq_edges = np.append(uniq_edges, 10000)
-			#print(uniq_edges)
-			labels = np.arange(2, dtype=np.int)
-			#print(labels)
-		else:
-			labels = np.arange(len(uniq_edges) - 1, dtype=np.int)
-		bins = pd.cut(df_cent[c], uniq_edges, include_lowest=True, retbins=True, labels=labels)[0]
-		bins.astype(int)
-		binned_columns.append(bins)
+    for c in df_cent:
+        uniq_edges = np.unique(criteria[c].tolist())
+        if len(uniq_edges) == 2:
+            # it must be binary variables
+            # shift the edge to the left a bit
+            uniq_edges = uniq_edges - 1e-5
+            # add a new edge
+            uniq_edges = np.append(uniq_edges, 10000)
+            #print(uniq_edges)
+            labels = np.arange(2, dtype=np.int)
+            #print(labels)
+        else:
+            labels = np.arange(len(uniq_edges) - 1, dtype=np.int)
+        bins = pd.cut(df_cent[c], uniq_edges, include_lowest=True, retbins=True, labels=labels)[0]
+        bins.astype(int)
+        binned_columns.append(bins)
 
-	df_binned = pd.concat(binned_columns, axis=1, ignore_index=True)
-	df_binned.columns = df_cent.columns
-	df_phi = pd.get_dummies(df_binned)
+    df_binned = pd.concat(binned_columns, axis=1, ignore_index=True)
+    df_binned.columns = df_cent.columns
+    df_phi = pd.get_dummies(df_binned)
     if as_matrix:
         return df_phi.as_matrix()
     else:

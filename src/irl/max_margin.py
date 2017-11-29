@@ -1,8 +1,6 @@
 import numpy as np
 from tqdm import tqdm
 
-
-from utils.plot import plot_margin_expected_value, plot_diff_feature_expectation, plot_value_function
 from mdp.solver import Q_value_iteration
 from policy.custom_policy import get_physician_policy
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
@@ -72,7 +70,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
 
             weights[i] = W
             # step 4: solve mdpr
-            compute_reward = make_reward_computer(W, get_state, phi)
+            compute_reward = make_reward_computer(W, phi)
             reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
             Q_star = Q_value_iteration(transition_matrix_train, reward_matrix)
             if use_stochastic_policy:
