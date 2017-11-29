@@ -44,7 +44,6 @@ if __name__ == '__main__':
     # initialize max margin irl stuff
     # preprocess phi
     sample_initial_state = make_initial_state_sampler(df_train)
-    get_state = make_state_centroid_finder(df_centroids, feature_columns)
     phi = apply_phi_to_centroids(df_centroids, as_matrix=True)
 
     # build reward_matrix (not change whether train/val)
@@ -112,7 +111,7 @@ if __name__ == '__main__':
         save_Q(pi_expert_phy.Q, save_path, num_trials, num_iterations,  PHYSICIAN_Q)
 
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_phy,
-                           sample_initial_state, get_state, phi,
+                           sample_initial_state, phi,
                            num_exp_trajectories, svm_penalty, svm_epsilon,
                        num_iterations, num_trials, experiment_id, save_path,
                             irl_use_stochastic_policy, verbose)
@@ -143,7 +142,7 @@ if __name__ == '__main__':
 
         experiment_id= 'greedy_mdp'
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_mdp,
-                           sample_initial_state, get_state, phi,
+                           sample_initial_state, phi,
                            num_exp_trajectories, svm_penalty, svm_epsilon,
                            num_iterations, num_trials, experiment_id,
                           save_path, irl_use_stochastic_policy, verbose)
@@ -159,7 +158,7 @@ if __name__ == '__main__':
 
         experiment_id= 'stochastic_mdp'
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_mdp_stochastic,
-                           sample_initial_state, get_state, phi,
+                           sample_initial_state, phi,
                            num_exp_trajectories, svm_penalty, svm_epsilon,
                            num_iterations, num_trials, experiment_id,
                            save_path, irl_use_stochastic_policy, verbose)
