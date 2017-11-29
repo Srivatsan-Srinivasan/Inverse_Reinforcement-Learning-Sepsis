@@ -26,11 +26,11 @@ VALIDATE_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_val.csv'
 
 TRAIN_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_train.npy'
 TRAIN_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_train.npy'
-TRAIN_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table_train.npy'
+TRAIN_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix_train.npy'
 
-VALIDATE_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_val.npy'
-VALIDATE_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_val.npy'
-VALIDATE_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table_val.npy'
+TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories.npy'
+TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
+REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix.npy'
 
 # since these are experiment-specific, we save them to
 # save_path = data/today_date/

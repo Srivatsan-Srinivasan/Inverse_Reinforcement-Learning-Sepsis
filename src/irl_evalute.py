@@ -1,7 +1,7 @@
-import os 
+import os
 import numpy as np
 import pandas as pd
-import pprint as pp 
+import pprint as pp
 
 import evaluation.log_likelihood as lh
 from utils import evaluation_utils as eu
@@ -15,7 +15,7 @@ def test_against_expert(df, expert_filepath, irl_expert_filepath,
     q_star_path = '{}_i{}.npy'.format(expert_filepath, iter_num)
     irl_path = '{}_i{}.npy'.format(irl_expert_filepath, iter_num)
     irl_weights_path = '{}_i{}_weights.npy'.format(DATA_PATH + date + plot_suffix, iter_num)
-    
+
     Q_star = np.load(q_star_path)[:NUM_PURE_STATES+1, :]
     Q_irl = np.load(irl_path)[:NUM_PURE_STATES+1, :]
     Q_irl_weights = np.load(irl_weights_path)
@@ -37,7 +37,7 @@ def test_against_expert(df, expert_filepath, irl_expert_filepath,
                                pi_physician_stochastic, num_states = NUM_PURE_STATES,
                                num_actions = NUM_ACTIONS, restrict_num=True, avg = True)
     KL = lh.get_KL_divergence(pi_physician_stochastic, opt_policy_learned)
-    
+
     print('will save plot results to {}'.format(img_path))
     eu.plot_KL(KL, plot_suffix=plot_suffix, save_path=img_path, iter_num=iter_num)
     eu.plot_avg_LL(LL, plot_suffix=plot_suffix, save_path=img_path, iter_num=iter_num)
@@ -50,17 +50,19 @@ if __name__ == '__main__':
     # example: date = '2016_02_02/'
     # make sure include trailing slash
     # check data folder to see for what dates data are available
-    date = '2017_11_24/'
+    date = '2017_11_28/'
     # pick which models you want manually for now...
     iter_num = 30
     if not os.path.exists(DATA_PATH + date):
-        raise Exception('desired date should be specified for loading saved data.') 
+        raise Exception('desired date should be specified for loading saved data.')
     else:
         img_path = DATA_PATH + date + IMG_PATH
 
     # expert policies
-    phy_q_filepath = DATA_PATH + date + PHYSICIAN_Q
-    mdp_q_filepath = DATA_PATH + date + MDP_OPTIMAL_Q
+    greedy_phy_q_filepath = DATA_PATH + date + PHYSICIAN_Q
+    stochastic_phy_q_filepath = DATA_PATH + date + PHYSICIAN_Q
+    greedy_mdp_q_filepath = DATA_PATH + date + MDP_OPTIMAL_Q
+    stochastic_mdp_q_filepath = DATA_PATH + date + MDP_OPTIMAL_Q
     irl_phy_q_greedy_filepath = DATA_PATH + date + IRL_PHYSICIAN_Q_GREEDY
     irl_phy_q_stochastic_filepath = DATA_PATH + date + IRL_PHYSICIAN_Q_STOCHASTIC
     irl_mdp_q_greedy_filepath = DATA_PATH + date + IRL_MDP_Q_GREEDY
@@ -72,11 +74,11 @@ if __name__ == '__main__':
     plot_phy_stochastic_id = 'stochastic_physician'
     plot_mdp_greedy_id = 'greedy_mdp'
     plot_mdp_stochastic_id = 'stochastic_mdp'
-    test_against_expert(df, phy_q_filepath, irl_phy_q_greedy_filepath,
+    test_against_expert(df, greedy_phy_q_filepath, irl_phy_q_greedy_filepath,
                         plot_phy_greedy_id, img_path, date, iter_num)
-    test_against_expert(df, phy_q_filepath, irl_phy_q_stochastic_filepath,
+    test_against_expert(df, stochastic_phy_q_filepath, irl_phy_q_stochastic_filepath,
                         plot_phy_stochastic_id, img_path, date, iter_num)
-    test_against_expert(df, mdp_q_filepath, irl_mdp_q_greedy_filepath,
+    test_against_expert(df, greedy_mdp_q_filepath, irl_mdp_q_greedy_filepath,
                         plot_mdp_greedy_id, img_path, date, iter_num)
-    test_against_expert(df, mdp_q_filepath, irl_mdp_q_stochastic_filepath,
+    test_against_expert(df, stochastic_mdp_q_filepath, irl_mdp_q_stochastic_filepath,
                         plot_mdp_stochastic_id, img_path, date, iter_num)

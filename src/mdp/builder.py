@@ -54,11 +54,11 @@ def _make_mdp(trajectories, num_states, num_actions):
             continue
         for a in range(num_actions):
             # store empirical reward
-            if (s, a) in avg_reward_sa:
-                #reward_matrix[s, a] = avg_reward_sa[(s, a)]
-                reward_matrix[s, a] = REWARD_UNVISITED_SA
-            else:
-                reward_matrix[s, a] = REWARD_UNVISITED_SA
+            #if (s, a) in avg_reward_sa:
+            #    #reward_matrix[s, a] = avg_reward_sa[(s, a)]
+            #    reward_matrix[s, a] = REWARD_UNVISITED_SA
+            #else:
+            #    reward_matrix[s, a] = REWARD_UNVISITED_SA
             # store empirical transitions
             if (s, a) in transition_count_sa:
                 # give small trans. prob to every next state
@@ -66,7 +66,7 @@ def _make_mdp(trajectories, num_states, num_actions):
                 num_sa = transition_count_sa[(s, a)]
                 for new_s in range(num_states):
                     i+=1
-                    if i % 10000 == 0:
+                    if i % 100000 == 0:
                         print('patience is a virtue. state: {}'.format(s, a))
                     if (s, a, new_s) in transition_count_sas:
                         num_sas = transition_count_sas[(s, a, new_s)]

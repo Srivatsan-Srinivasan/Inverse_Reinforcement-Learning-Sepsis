@@ -28,6 +28,7 @@ def make_state_centroid_finder(df, columns=None):
         return df.iloc[state]
     return f
 
+
 def estimate_feature_expectation(transition_matrix,
                                  sample_initial_state, get_state, phi, pi,
                                  gamma=0.99, num_trajectories=300, max_iter=1000):
@@ -68,6 +69,8 @@ def estimate_feature_expectation(transition_matrix,
             s_cent = get_state(new_s)
       
     mu = mu / num_trajectories
+    # let's not use v estimated here
+    # let's use evaluate_policy_monte_carlo
     v =  v_sum / num_trajectories
     return mu, v
 

@@ -1,6 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-  
+
 
 from utils.plot import plot_margin_expected_value, plot_diff_feature_expectation, plot_value_function
 from mdp.solver import Q_value_iteration
@@ -43,7 +43,7 @@ def _max_margin_learner(transition_matrix, reward_matrix, pi_expert,
     intermediate_reward_matrix = np.zeros((reward_matrix.shape))
     approx_exp_policies = np.array([None] * num_trials)
     approx_exp_weights = np.array([None] * num_trials)
-    
+
 
     for trial_i in tqdm(range(num_trials)):
         if verbose:
@@ -150,13 +150,17 @@ def run_max_margin(transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, get_state, phi,
                        num_exp_trajectories, svm_penalty, svm_epsilon,
                        num_iterations, num_trials, use_stochastic_policy, verbose)
-    np.save('{}{}_i{}_result'.format(save_path, experiment_id, num_iterations), res)
-    np.save('{}{}_i{}_weights'.format(save_path, experiment_id, num_iterations),
+    np.save('{}{}_t{}xi{}_result'.format(save_path, experiment_id, num_trials, num_iterations), res)
+    np.save('{}{}_t{}xi{}_weights'.format(save_path, experiment_id, num_trials, num_iterations),
             res['approx_expert_weights'])
+    print('final weights learned for ', experiment_id)
+    print(res['approx_expert_weights'])
+    print('')
     img_path = save_path + IMG_PATH
-    plot_margin_expected_value(res['margins'], num_iterations, img_path, experiment_id)
-    plot_diff_feature_expectation(res['dist_mus'], num_iterations, img_path, experiment_id)
+    plot_margin_expected_value(res['margins'], num_trials, num_iterations, img_path, experiment_id)
+    plot_diff_feature_expectation(res['dist_mus'], num_trials, num_iterations, img_path, experiment_id)
     # TODO: this is not really a good measure of policy performance
-    plot_value_function(res['v_pis'], res['v_pi_expert'], num_iterations, img_path, experiment_id)
+    plot_value_function(res['v_pis'], res['v_pi_expert'], num_trials, num_iterations, img_path, experiment_id)
 
     return res['approx_expert_Q']
+

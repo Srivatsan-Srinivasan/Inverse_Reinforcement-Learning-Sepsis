@@ -1,5 +1,6 @@
 # custom stuff
 src/data/**/*.csv
+src/data/**/*.npy
 src/data/**/transition_matrix*
 src/data/transition_matrix*
 src/data/backup/transition_matrix*

@@ -5,31 +5,32 @@ import itertools
 from policy.policy import EpsilonGreedyPolicy, GreedyPolicy
 from learners.monte_carlo_on_policy import run_mc_actor
 from constants import TERMINAL_STATE_ALIVE, TERMINAL_STATE_DEAD
+from utils.utils import is_terminal_state, compute_terminal_state_reward
 
-# Update the Q table 
+# Update the Q table
 def update_Q_Qlearning( Q_table, state , action , reward , new_state , new_action, alpha=0.5, gamma=0.95 ):
     new_action = np.random.choice(np.flatnonzero(Q_table[ new_state , : ] == Q_table[ new_state , : ].max()))
     Q_table[state, action] = Q_table[state, action] + alpha*(reward + gamma*Q_table[new_state, new_action]- Q_table[state, action])
-    # FILL THIS IN 
-    return Q_table 
+    # FILL THIS IN
+    return Q_table
 
 def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES, NUM_ACTIONS, episode_count = 500, max_task_iter = np.inf, epsilon = 0.2):
-    # Initialize the Q table 
+    # Initialize the Q table
     Q_table = np.zeros( ( NUM_STATES , NUM_ACTIONS ) )
     iteration = 0
 
-    # Loop until the episode is done 
+    # Loop until the episode is done
     for episode_iter in range( episode_count ):
         print ("episode_iter", episode_iter)
         if iteration >= 3000 and episode_iter >= 100:
             break
         else:
-            # Start the task 
+            # Start the task
             task.reset()
-            state = task.observe() 
+            state = task.observe()
             print ("initial state", state)
-            action = policy( state , Q_table , NUM_ACTIONS , epsilon ) 
-            task_iter = 0 
+            action = policy( state , Q_table , NUM_ACTIONS , epsilon )
+            task_iter = 0
 
             # Loop until done
             while task_iter < max_task_iter:
@@ -40,15 +41,15 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
                 reward = reward_matrix[state]
                 t_probs = np.copy(transition_matrix[state, action, :])
                 new_state = np.random.choice(NUM_STATES, p=t_probs)
-                new_action = policy( new_state , Q_table , NUM_ACTIONS , epsilon ) 
+                new_action = policy( new_state , Q_table , NUM_ACTIONS , epsilon )
                 if iteration%5000 == 0:
                     print ("iteration", iteration )
                     print ("s,a,s,a", state, action, new_state, new_action)
 
-                # update Q_table    
-                Q_table = update_Q_Qlearning(Q_table , 
+                # update Q_table
+                Q_table = update_Q_Qlearning(Q_table ,
                                              state , action , reward , new_state , new_action)
-                # stop if at goal/else update for the next iteration 
+                # stop if at goal/else update for the next iteration
                 if task.is_terminal( state ):
                     break
                 else:
@@ -62,13 +63,41 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
     return optimal_policy, Q_table
 
 
-def evaluate_policy_monte_carlo(env, pi, gamma=0.99, num_episodes=100):
+def evaluate_policy_monte_carlo(pi, sample_initial_state, transition_matrix, reward_matrix,
+                                gamma=0.99, num_episodes=700):
     rewards = []
     for _ in range(num_episodes):
-        exps = run_mc_actor(env, pi, max_local_iter=500)
+        exps = run_mc_actor(pi, transition_matrix, reward_matrix, max_local_iter=500)
         G = np.sum([(gamma**t)*e[2] for t, e in enumerate(exps)])
         rewards.append(G)
     return np.mean(rewards)
+
+def run_mc_actor(pi, sample_initial_state, transition_matrix, reward_matrix, max_local_iter=500):
+    '''
+    violates DRY principle but let's keep it here also
+    '''
+    exps = []
+    s = sample_initial_state()
+    iter_i = 0
+    while iter_i < max_local_iter:
+        a = pi.choose_action(s)
+        r = reward_matrix[s]
+        print('took {} at {} got {}'.format(a, s, r))
+        # get the next state
+        probs = np.copy(transition_matrix[s, a, :])
+        # need to renomralize so sum(probs) < 1
+        probs /= np.sum(probs)
+        new_s = np.random.choice(np.arange(len(probs)), p=probs)
+        # get the next action
+        if is_terminal_state(s):
+            print('reached terminal state after {} steps'.format(iter_i))
+            break
+        else:
+            exps.append((s, a, r, new_s))
+            s = new_s
+        iter_i += 1
+    print('Monte Carlo On Policy episode ended at ', iter_i)
+    return exps
 
 @nb.jit
 def iterate_value(Q_table, transition_matrix, reward_table, gamma=0.95, theta=0.1, max_iter=100):
@@ -147,7 +176,7 @@ def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
             #print('value converged after {} steps'.format(t))
             break
         v_old = v
-        return Q[:-2, :]
+    return Q[:-2, :]
 
 
 def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):

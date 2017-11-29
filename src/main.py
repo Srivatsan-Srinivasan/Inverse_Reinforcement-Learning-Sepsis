@@ -29,25 +29,43 @@ if __name__ == '__main__':
         print('svm epsilon', svm_epsilon)
         print('')
 
-    # loading the whole data
-    df_train, df_val, df_centroids = load_data()
+    # loading the data
+    df_train, df_val, df_centroids, df = load_data()
+
+    # build reward_matrix (not change whether train/val)
     feature_columns = df_centroids.columns
-    trajectories = extract_trajectories(df_train, NUM_PURE_STATES, TRAIN_TRAJECTORIES_FILEPATH)
-    trajectory_ids = trajectories[:, 0]
-    num_exp_trajectories = np.unique(trajectories[:, 0]).shape[0]
-    
-    transition_matrix, reward_matrix = \
-            make_mdp(trajectories, NUM_STATES, NUM_ACTIONS, TRAIN_TRANSITION_MATRIX_FILEPATH,
-                     TRAIN_REWARD_MATRIX_FILEPATH)
     reward_matrix = np.zeros((NUM_STATES))
     # adjust rmax, rmin to keep w^Tphi(s) <= 1
     reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(len(feature_columns))
     reward_matrix[TERMINAL_STATE_DEAD]  = -np.sqrt(len(feature_columns))
+    assert(np.isclose(np.sum(reward_matrix), 0))
 
-    # check irl/max_margin for implementation
+    #evaluate_policy_monte_carlo()
+    # build MDP using full data
+    trajectories = extract_trajectories(df, NUM_PURE_STATES, TRAJECTORIES_FILEPATH)
+    trajectory_train_ids = trajectories[:, 0]
+    num_exp_trajectories = np.unique(trajectories[:, 0]).shape[0]
+    transition_matrix, _ = \
+            make_mdp(trajectories, NUM_STATES, NUM_ACTIONS, TRANSITION_MATRIX_FILEPATH,
+                     REWARD_MATRIX_FILEPATH)
+    print('number of expert trajectories for full data', num_exp_trajectories)
+    assert np.isclose(np.sum(transition_matrix), NUM_STATES * NUM_ACTIONS), 'something wrong with \ test transition_matrix'
+
+    # build MDP using only training data
+    trajectories_train = extract_trajectories(df_train, NUM_PURE_STATES, TRAIN_TRAJECTORIES_FILEPATH)
+    trajectory_train_ids = trajectories_train[:, 0]
+    num_exp_trajectories_train = np.unique(trajectories_train[:, 0]).shape[0]
+    transition_matrix_train, _ = \
+            make_mdp(trajectories_train, NUM_STATES, NUM_ACTIONS, TRAIN_TRANSITION_MATRIX_FILEPATH,
+                     TRAIN_REWARD_MATRIX_FILEPATH)
+    print('number of expert trajectories for train data', num_exp_trajectories_train)
+    assert np.isclose(np.sum(transition_matrix), NUM_STATES * NUM_ACTIONS), 'something wrong with \
+         train transition_matrix'
+
+    # show the world
     if verbose:
         print('number of features', len(feature_columns))
-        print('transition_matrix size', transition_matrix.shape)
+        print('transition_matrix_train size', transition_matrix_train.shape)
         print('reward_matrix size', reward_matrix.shape)
         print('max rewards: ', np.max(reward_matrix))
         print('min rewards: ', np.min(reward_matrix))
@@ -60,7 +78,7 @@ if __name__ == '__main__':
     get_state = make_state_centroid_finder(df_centroids, feature_columns)
     phi = make_phi(df_centroids)
 
-    # initalize saving
+    # initalize saving folder
     save_path = initialize_save_data_folder()
     print('will save expriment results to {}'.format(save_path))
     #with open(save_path + 'experiment.txt', 'wb') as f:
@@ -70,50 +88,64 @@ if __name__ == '__main__':
     #    svm_epsilon = 0.01
     #    f.write()
 
-    print('EXPERIMENT #1: greedy deterministic clinician expert')
-    experiment_id= 'greedy_physician' + custom_experiment_id
-    pi_expert_phy = get_physician_policy(trajectories, is_stochastic=False)
-    save_Q(pi_expert_phy.Q, save_path, PHYSICIAN_Q)
-
-    irl_physician_Q_greedy = run_max_margin(transition_matrix, np.copy(reward_matrix), pi_expert_phy,
-                       sample_initial_state, get_state, phi,
-                       num_exp_trajectories, svm_penalty, svm_epsilon,
-                   num_iterations, num_trials, experiment_id, save_path,
-                        irl_use_stochastic_policy, verbose)
-    save_Q(irl_physician_Q_greedy, save_path, IRL_PHYSICIAN_Q_GREEDY)
-
-    print('EXPERIMENT #2: stochastic clinician expert')
-    experiment_id= 'stochastic_physician' + custom_experiment_id
-    pi_expert_phy_stochastic = get_physician_policy(trajectories, is_stochastic=True)
-    irl_physician_Q_stochastic = run_max_margin(transition_matrix, np.copy(reward_matrix),
-                                     pi_expert_phy_stochastic, sample_initial_state,
-                                     get_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                                     num_iterations, num_trials, experiment_id,
-                                    save_path, irl_use_stochastic_policy, verbose)
-    save_Q(irl_physician_Q_stochastic, save_path, IRL_PHYSICIAN_Q_STOCHASTIC)
-
-    print('EXPERIMENT #3: artificial MDP-optimal expert')
+    Q_star_train = Q_value_iteration(transition_matrix_train, np.copy(reward_matrix))
+    pi_expert_mdp_train = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star_train)
     Q_star = Q_value_iteration(transition_matrix, np.copy(reward_matrix))
     pi_expert_mdp = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
-    save_Q(pi_expert_mdp.Q, save_path, MDP_OPTIMAL_Q)
 
-    experiment_id= 'greedy_mdp' + custom_experiment_id
-    irl_mdp_Q_greedy = run_max_margin(transition_matrix, np.copy(reward_matrix), pi_expert_mdp,
-                       sample_initial_state, get_state, phi,
-                       num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, experiment_id,
-                      save_path, irl_use_stochastic_policy, verbose)
-    save_Q(irl_mdp_Q_greedy, save_path, IRL_MDP_Q_GREEDY)
+    def experiment_1():
+        print('EXPERIMENT #1: greedy deterministic clinician expert')
+        experiment_id= 'greedy_physician' + custom_experiment_id
+        pi_expert_phy = get_physician_policy(trajectories, is_stochastic=False)
+        save_Q(pi_expert_phy.Q, save_path, num_trials, num_iterations,  PHYSICIAN_Q)
 
-    print('EXPERIMENT #4: artificial MDP-optimal expert (stochastic)')
-    Q_star = Q_value_iteration(transition_matrix, np.copy(reward_matrix))
-    pi_expert_mdp_stochastic = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+        irl_physician_Q_greedy = run_max_margin(transition_matrix_train, np.copy(reward_matrix), pi_expert_phy,
+                           sample_initial_state, get_state, phi,
+                           num_exp_trajectories, svm_penalty, svm_epsilon,
+                       num_iterations, num_trials, experiment_id, save_path,
+                            irl_use_stochastic_policy, verbose)
+        save_Q(irl_physician_Q_greedy, save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_GREEDY)
 
-    experiment_id= 'stochastic_mdp' + custom_experiment_id
-    irl_mdp_Q_stochastic = run_max_margin(transition_matrix, np.copy(reward_matrix), pi_expert_mdp_stochastic,
-                       sample_initial_state, get_state, phi,
-                       num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, experiment_id,
-                       save_path, irl_use_stochastic_policy, verbose)
-    save_Q(irl_mdp_Q_stochastic, save_path, IRL_MDP_Q_STOCHASTIC)
+    def experiment_2():
+        print('EXPERIMENT #2: clinician expert (stochastic)')
+        experiment_id= 'stochastic_physician' + custom_experiment_id
+        pi_expert_phy_stochastic = get_physician_policy(trajectories, is_stochastic=True)
+        irl_physician_Q_stochastic = run_max_margin(transition_matrix_train, np.copy(reward_matrix),
+                                         pi_expert_phy_stochastic, sample_initial_state,
+                                         get_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
+                                         num_iterations, num_trials, experiment_id,
+                                        save_path, irl_use_stochastic_policy, verbose)
+        save_Q(irl_physician_Q_stochastic, save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_STOCHASTIC)
 
+    def experiment_3():
+        print('EXPERIMENT #3: artificial MDP-optimal expert')
+        Q_star = Q_value_iteration(transition_matrix_train, np.copy(reward_matrix))
+        pi_expert_mdp = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+        save_Q(pi_expert_mdp.Q, save_path,num_trials, num_iterations, MDP_OPTIMAL_Q)
+
+        experiment_id= 'greedy_mdp' + custom_experiment_id
+        irl_mdp_Q_greedy = run_max_margin(transition_matrix_train, np.copy(reward_matrix), pi_expert_mdp,
+                           sample_initial_state, get_state, phi,
+                           num_exp_trajectories, svm_penalty, svm_epsilon,
+                           num_iterations, num_trials, experiment_id,
+                          save_path, irl_use_stochastic_policy, verbose)
+        save_Q(irl_mdp_Q_greedy, save_path, num_trials, num_iterations, IRL_MDP_Q_GREEDY)
+
+    def experiment_4():
+        print('EXPERIMENT #4: artificial MDP-optimal expert (stochastic)')
+        Q_star = Q_value_iteration(transition_matrix_train, np.copy(reward_matrix))
+        pi_expert_mdp_stochastic = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+
+        experiment_id= 'stochastic_mdp' + custom_experiment_id
+        irl_mdp_Q_stochastic = run_max_margin(transition_matrix_train, np.copy(reward_matrix), pi_expert_mdp_stochastic,
+                           sample_initial_state, get_state, phi,
+                           num_exp_trajectories, svm_penalty, svm_epsilon,
+                           num_iterations, num_trials, experiment_id,
+                           save_path, irl_use_stochastic_policy, verbose)
+        save_Q(irl_mdp_Q_stochastic, save_path, num_trials, num_iterations, IRL_MDP_Q_STOCHASTIC)
+
+
+    experiment_1()
+    experiment_2()
+    experiment_3()
+    experiment_4()
