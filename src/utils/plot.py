@@ -1,11 +1,15 @@
 import numpy as np
 import scipy as sp
+import matplotlib
 from matplotlib import pyplot as plt
 import seaborn as sns
 from scipy.stats import sem
-sns.set(style='dark', palette='husl')
+sns.set(style='dark', palette='Set1')
 from constants import IMG_PATH
-
+FONT_SIZE = 20
+font = {'weight' : 'bold',
+        'size'   : FONT_SIZE}
+matplotlib.rc('font', **font)
 
 def plot_hyperplane(X, xx, yy):
     '''
@@ -27,7 +31,7 @@ def plot_hyperplane(X, xx, yy):
     #ax2.plot(xx, yy, label='smooth')
 
 
-def plot_margin_expected_value(margins, num_iterations, save_path, plot_prefix='new'):
+def plot_margin_expected_value(margins, num_trials, num_iterations, save_path, plot_prefix='new'):
     '''
     plot margin in expected value of expert (best) and second-best policy
     params:
@@ -39,17 +43,18 @@ def plot_margin_expected_value(margins, num_iterations, save_path, plot_prefix='
     plt.ylim((0, np.max(margins) * 1.2))
     plt.errorbar(np.arange(1, num_iterations+1), avg_margins,
                  label=r'$w^T\mu_E-w^T\mu_{\tilde{\pi}}$',
-                 yerr=margin_se, fmt='-o')
+                 yerr=margin_se, fmt='-o', lw=3)
     plt.xticks(np.arange(0, num_iterations+1, 5))
-    plt.xlabel('Number of iterations')
-    plt.ylabel('Margin in Expected Value')
+    plt.tick_params(labelsize=FONT_SIZE)
+    plt.xlabel('Number of iterations', fontsize=FONT_SIZE)
+    plt.ylabel('Margin in Expected Value', fontsize=FONT_SIZE)
     plt.legend()
-    plt.savefig('{}{}_margin_i{}'.format(save_path, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.savefig('{}{}_margin_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 
 
-def plot_diff_feature_expectation(dist_mus, num_iterations, save_path, plot_prefix='new'):
+def plot_diff_feature_expectation(dist_mus, num_trials, num_iterations, save_path, plot_prefix='new'):
     '''
     plot l2 distance between mu_expert and mu_pi_tilda
     '''
@@ -59,17 +64,18 @@ def plot_diff_feature_expectation(dist_mus, num_iterations, save_path, plot_pref
     plt.ylim((0, np.max(dist_mus) * 1.2))
     plt.errorbar(np.arange(1, num_iterations+1), avg_dist_mus,
                  label=r'$||\mu_E-\mu_{\tilde{\pi}}||$',
-                 yerr=dist_se, fmt='-o')
+                 yerr=dist_se, fmt='-o', lw=3)
+    plt.tick_params(labelsize=FONT_SIZE)
     plt.xticks(np.arange(1, num_iterations+1, 5))
-    plt.xlabel('Number of iterations')
-    plt.ylabel('L2 Distance in Feature Expectation')
+    plt.xlabel('Number of iterations',fontsize=FONT_SIZE)
+    plt.ylabel('L2 Distance in Feature Expectation', fontsize=FONT_SIZE)
     plt.legend()
-    plt.savefig('{}{}_dist_mu_i{}'.format(save_path, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.savefig('{}{}_dist_mu_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 
 
-def plot_value_function(v_pis, v_pi_expert, num_iterations, save_path, plot_prefix='new'):
+def plot_value_function(v_pis, v_pi_expert, num_trials, num_iterations, save_path, plot_prefix='new'):
     avg_v_pis = np.mean(v_pis, axis=0)
     v_pi_se = sem(v_pis, axis=0)
     fig = plt.figure(figsize=(10, 10))
@@ -77,14 +83,15 @@ def plot_value_function(v_pis, v_pi_expert, num_iterations, save_path, plot_pref
     max_ylim = np.max([np.max(avg_v_pis), v_pi_expert])
     plt.ylim((min_ylim*.8, max_ylim*1.2))
     plt.errorbar(np.arange(1, num_iterations+1), avg_v_pis, yerr=v_pi_se,
-                 fmt='-o', label=r'$E_{s_0 \sim D(s)}[V^{\tilde \pi}(s_0)]$')
-    plt.axhline(v_pi_expert, label=r'$E_{s_0 \sim D(s)}[V^{\pi_E}(s_0)]$', c='c')
+                 fmt='-o', label=r'$E_{s_0 \sim D(s)}[V^{\tilde \pi}(s_0)]$', lw=3)
+    plt.axhline(v_pi_expert, label=r'$E_{s_0 \sim D(s)}[V^{\pi_E}(s_0)]$', c='c', lw=3)
     plt.xticks(np.arange(1, num_iterations+1, 5))
-    plt.xlabel('Number of iterations')
+    plt.tick_params(labelsize=FONT_SIZE)
+    plt.xlabel('Number of iterations', fontsize=FONT_SIZE)
 
-    plt.ylabel('Performance')
+    plt.ylabel('Performance', fontsize=FONT_SIZE)
     plt.legend()
-    plt.savefig('{}{}_v_pi_i{}'.format(save_path, plot_prefix, num_iterations), ppi=300, bbox_inches='tight')
+    plt.savefig('{}{}_v_pi_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 def plot_intermediate_rewards():

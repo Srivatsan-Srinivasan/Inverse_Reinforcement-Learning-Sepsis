@@ -3,10 +3,11 @@ import datetime
 import numpy as np
 import numba as nb
 import pandas as pd
+
 from scipy import stats
 from sklearn.decomposition import PCA
-from sklearn.cluster import MiniBatchKMeans 
-from sklearn import preprocessing 
+from sklearn.cluster import MiniBatchKMeans
+from sklearn import preprocessing
 from constants import *
 import pickle
 
@@ -20,15 +21,16 @@ def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     return (check1 | check2 | check3) == set(ETC)
 
 
-
 def save_data(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
 
-def save_Q(Q, save_path, data_name):
+
+def save_Q(Q, save_path, num_trials, num_iterations, data_name):
     # TODO: check for instance of class and make sure to save Q instead of an instance
-    np.save('{}{}'.format(save_path, data_name), Q)
-    
+    np.save('{}{}_t{}xi{}'.format(save_path, data_name, num_trials, num_iterations), Q)
+
+
 def load_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES
     if os.path.isfile(TRAIN_CLEANSED_DATA_FILEPATH) and os.path.isfile(VALIDATE_CLEANSED_DATA_FILEPATH):
@@ -40,14 +42,19 @@ def load_data():
         print('processing data from scratch')
         df_train = _load_data(TRAIN_FILEPATH)
         df_val = _load_data(VALIDATE_FILEPATH)
+        assert not df_train.isnull().values.any(), "there's null values in df_train"
+        assert not df_val.isnull().values.any(), "there's null values in df_val"
         print('correcting obvious errors')
         df_corrected_train, df_corrected_val = correct_data(df_train, df_val)
+        assert not df_corrected_train.isnull().values.any(), "there's null values in df_corrected_train"
+        assert not df_corrected_val.isnull().values.any(), "there's null values in df_corrected_val"
         print('standardizing data')
         df_norm_train, df_norm_val = normalize_data(df_corrected_train, df_corrected_val)
+        assert not df_norm_train.isnull().values.any(), "there's null values in df_norm_train"
+        assert not df_norm_val.isnull().values.any(), "there's null values in df_norm_val"
         # separate x mu y from df
         X_train, mu_train, y_train, X_val, mu_val, y_val = \
                 separate_X_mu_y(df_norm_train, df_norm_val, ALL_VALUES)
-
         # k-means clustering to consturct discrete states
         print('clustering for states')
         X_to_cluster_train = X_train.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
@@ -63,9 +70,14 @@ def load_data():
         df_centroids_train.to_csv(TRAIN_CENTROIDS_DATA_FILEPATH, index=False)
         df_cleansed_train.to_csv(TRAIN_CLEANSED_DATA_FILEPATH, index=False)
         df_cleansed_val.to_csv(VALIDATE_CLEANSED_DATA_FILEPATH, index=False)
+
+    assert not df_cleansed_train.isnull().values.any(), "there's null values in df_cleansed_train"
+    assert not df_cleansed_val.isnull().values.any(), "there's null values in df_cleansed_val"
+    assert not df_centroids_train.isnull().values.any(), "there's null values in df_centroids_train"
     # we don't load full data
     # if need be, it's easy to add them
-    return df_cleansed_train, df_cleansed_val, df_centroids_train
+    df_full = pd.concat([df_cleansed_train, df_cleansed_val], axis=0, ignore_index=True)
+    return df_cleansed_train, df_cleansed_val, df_centroids_train, df_full
 
 
 def _load_data(path):
@@ -138,7 +150,7 @@ def _extract_trajectories(df, num_states):
     trajectories.loc[:, 'new_s'] = new_s.astype(np.int)
 
     return trajectories.as_matrix()
-   
+
 
 def normalize_data(df_train, df_val):
     # divide cols: numerical, categorical, text data
@@ -254,7 +266,7 @@ def get_action_discretization_rules(
         (input_4hourly__sequence__continuous > 0).astype(int)
     input_4hourly__sequence__discretized[ input_4hourly__sequence__discretized == 1 ] = \
         input_4hourly__sequence__discretized__no_zeros + 1
-        
+
     # Vaopressors discretization
     median_dose_vaso__sequence__continuous__no_zeros = median_dose_vaso__sequence__continuous[ \
         median_dose_vaso__sequence__continuous > 0]
@@ -265,7 +277,7 @@ def get_action_discretization_rules(
         (median_dose_vaso__sequence__continuous > 0).astype(int)
     median_dose_vaso__sequence__discretized[ median_dose_vaso__sequence__discretized == 1 ] = \
         median_dose_vaso__sequence__discretized__no_zeros + 1
-        
+
     ## Combine both actions discretizations
     #actions_sequence = median_dose_vaso__sequence__discretized * bins_num + \
     #    input_4hourly__sequence__discretized
