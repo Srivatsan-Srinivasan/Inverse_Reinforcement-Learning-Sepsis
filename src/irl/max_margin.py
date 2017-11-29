@@ -1,6 +1,5 @@
 import numpy as np
 from tqdm import tqdm
-
 from mdp.solver import Q_value_iteration
 from policy.custom_policy import get_physician_policy
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
@@ -44,7 +43,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
     intermediate_reward_matrix = np.zeros((reward_matrix.shape))
     approx_exp_policies = np.array([None] * num_trials)
     approx_exp_weights = np.array([None] * num_trials)
-
+    
 
     for trial_i in tqdm(range(num_trials)):
         if verbose:

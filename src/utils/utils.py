@@ -21,6 +21,7 @@ def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     return (check1 | check2 | check3) == set(ETC)
 
 
+
 def save_data(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
@@ -156,7 +157,6 @@ def _extract_trajectories(df, num_states):
 
     return trajectories.as_matrix()
 
-
 def normalize_data(df_train, df_val):
     # divide cols: numerical, categorical, text data
     # logarithimic scale
@@ -271,7 +271,6 @@ def get_action_discretization_rules(
         (input_4hourly__sequence__continuous > 0).astype(int)
     input_4hourly__sequence__discretized[ input_4hourly__sequence__discretized == 1 ] = \
         input_4hourly__sequence__discretized__no_zeros + 1
-
     # Vaopressors discretization
     median_dose_vaso__sequence__continuous__no_zeros = median_dose_vaso__sequence__continuous[ \
         median_dose_vaso__sequence__continuous > 0]
