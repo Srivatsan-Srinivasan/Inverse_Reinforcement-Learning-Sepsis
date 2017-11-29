@@ -62,12 +62,40 @@ def Q_learning_solver_for_irl(task, transition_matrix, reward_matrix, NUM_STATES
     optimal_policy = GreedyPolicy(NUM_STATES, NUM_ACTIONS, Q_table)
     return optimal_policy, Q_table
 
+def evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi,
+                                 gamma=0.99, num_trajectories=300, max_iter=500):
+    '''
+    estimate mu_pi and v_pi with monte carlo simulation
+    with reward_matrix whose only non-zero rewards are terminal rewards
+    '''
+
+    v_sum = 0.0
+    for i in range(num_trajectories):
+        s = sample_initial_state()
+        for t in itertools.count():
+            if t > max_iter:
+                print('max iter timeout broke')
+                break
+            if is_terminal_state(s):
+                v_sum += gamma** t * reward_matrix[s]
+                break
+            # sample action
+            a = pi.choose_action(s)
+            # sample next state
+            probs = np.copy(transition_matrix[s, a, :])
+            probs /= np.sum(probs)
+            s = np.random.choice(np.arange(len(probs)), p=probs)
+    v =  v_sum / num_trajectories
+    return v
 
 def evaluate_policy_monte_carlo(pi, sample_initial_state, transition_matrix, reward_matrix,
                                 gamma=0.99, num_episodes=700):
+    '''
+    too slow
+    '''
     rewards = []
     for _ in range(num_episodes):
-        exps = run_mc_actor(pi, transition_matrix, reward_matrix, max_local_iter=500)
+        exps = run_mc_actor(pi, sample_initial_state, transition_matrix, reward_matrix, max_local_iter=500)
         G = np.sum([(gamma**t)*e[2] for t, e in enumerate(exps)])
         rewards.append(G)
     return np.mean(rewards)
@@ -75,28 +103,31 @@ def evaluate_policy_monte_carlo(pi, sample_initial_state, transition_matrix, rew
 def run_mc_actor(pi, sample_initial_state, transition_matrix, reward_matrix, max_local_iter=500):
     '''
     violates DRY principle but let's keep it here also
+    and too slow
     '''
     exps = []
     s = sample_initial_state()
+    a = pi.choose_action(s)
     iter_i = 0
     while iter_i < max_local_iter:
-        a = pi.choose_action(s)
         r = reward_matrix[s]
-        print('took {} at {} got {}'.format(a, s, r))
+        #print('took {} at {} got {}'.format(a, s, r))
         # get the next state
         probs = np.copy(transition_matrix[s, a, :])
         # need to renomralize so sum(probs) < 1
         probs /= np.sum(probs)
         new_s = np.random.choice(np.arange(len(probs)), p=probs)
         # get the next action
+        exps.append((s, a, r, new_s))
         if is_terminal_state(s):
-            print('reached terminal state after {} steps'.format(iter_i))
+            print('reward', r)
+            #print('reached terminal state after {} steps'.format(iter_i))
             break
         else:
-            exps.append((s, a, r, new_s))
             s = new_s
+            a = pi.choose_action(new_s)
         iter_i += 1
-    print('Monte Carlo On Policy episode ended at ', iter_i)
+    #print('Monte Carlo On Policy episode ended at ', iter_i)
     return exps
 
 @nb.jit
@@ -177,7 +208,6 @@ def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
             break
         v_old = v
     return Q[:-2, :]
-
 
 def solve_mdp(transition_matrix, reward_matrix, gamma=1.0):
     '''
