@@ -30,6 +30,13 @@ def save_Q(Q, save_path, num_trials, num_iterations, data_name):
     # TODO: check for instance of class and make sure to save Q instead of an instance
     np.save('{}{}_t{}xi{}'.format(save_path, data_name, num_trials, num_iterations), Q)
 
+def detect_binary_value_columns(df):
+    '''
+    return:
+        a list of columns names with binary values
+    '''
+    return [col for col in df if df[col].dropna().value_counts().index.isin([0,1]).all()]
+
 
 def load_data():
     num_states = NUM_STATES - NUM_TERMINAL_STATES
@@ -79,7 +86,6 @@ def load_data():
     df_full = pd.concat([df_cleansed_train, df_cleansed_val], axis=0, ignore_index=True)
     return df_cleansed_train, df_cleansed_val, df_centroids_train, df_full
 
-
 def _load_data(path):
     df = pd.read_csv(path)
     valid_int_cols = list(set(df.columns) & set(INTEGER_COLS))
@@ -108,7 +114,6 @@ def extract_trajectories(df, num_states, trajectory_filepath):
         np.save(trajectory_filepath, trajectories)
     trajectories = trajectories.astype(np.int)
     return trajectories
-
 
 def _extract_trajectories(df, num_states):
     '''
@@ -322,3 +327,39 @@ def compute_terminal_state_reward(s, num_features):
         return -np.sqrt(num_features)
     else:
         raise Exception('not recognizing this terminal state: '.foramt(s))
+
+
+def apply_phi_to_centroids(df_cent, as_matrix=False):
+    '''
+    convert centroid values into quartile-based bins
+    create dummy variable so every column is one or zero
+    '''
+	criteria = df_train.describe().loc[['min', '25%', '50%', '75%', 'max']]
+	# pandas cut does not see to support vectorize version
+	df_cent.head()
+	binned_columns = []
+
+	for c in df_cent:
+		uniq_edges = np.unique(criteria[c].tolist())
+		if len(uniq_edges) == 2:
+			# it must be binary variables
+			# shift the edge to the left a bit
+			uniq_edges = uniq_edges - 1e-5
+			# add a new edge
+			uniq_edges = np.append(uniq_edges, 10000)
+			#print(uniq_edges)
+			labels = np.arange(2, dtype=np.int)
+			#print(labels)
+		else:
+			labels = np.arange(len(uniq_edges) - 1, dtype=np.int)
+		bins = pd.cut(df_cent[c], uniq_edges, include_lowest=True, retbins=True, labels=labels)[0]
+		bins.astype(int)
+		binned_columns.append(bins)
+
+	df_binned = pd.concat(binned_columns, axis=1, ignore_index=True)
+	df_binned.columns = df_cent.columns
+	df_phi = pd.get_dummies(df_binned)
+    if as_matrix:
+        return df_phi.as_matrix()
+    else:
+        return df_phi

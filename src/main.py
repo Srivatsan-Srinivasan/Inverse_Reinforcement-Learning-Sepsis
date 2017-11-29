@@ -1,5 +1,6 @@
 import numpy as np
-from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder
+from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder,
+apply_phi_to_centroids
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
 from policy.custom_policy import get_physician_policy
 from mdp.builder import make_mdp
@@ -8,6 +9,15 @@ from irl.max_margin import run_max_margin
 from irl.irl import  make_state_centroid_finder, make_phi, make_initial_state_sampler
 from constants import *
 
+# don't move this for now
+def plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+    img_path = save_path + IMG_PATH
+    plot_margin_expected_value(res['margins'], num_trials, num_iterations, img_path, experiment_id)
+    plot_diff_feature_expectation(res['dist_mus'], num_trials, num_iterations, img_path, experiment_id)
+    # TODO: this is not really a good measure of policy performance
+    plot_value_function(res['v_pis'], res['v_pi_expert'], num_trials, num_iterations, img_path, experiment_id)
+    # testing performance
+    #plot_value_function(res['v_pis'], res['v_pi_expert'], num_trials, num_iterations, img_path, experiment_id)
 
 if __name__ == '__main__':
     # set hyperparams here
@@ -31,9 +41,14 @@ if __name__ == '__main__':
 
     # loading the data
     df_train, df_val, df_centroids, df = load_data()
+    # initialize max margin irl stuff
+    # preprocess phi
+    sample_initial_state = make_initial_state_sampler(df_train)
+    get_state = make_state_centroid_finder(df_centroids, feature_columns)
+    phi = apply_phi_to_centroids(df_centroids, as_matrix=True)
 
     # build reward_matrix (not change whether train/val)
-    feature_columns = df_centroids.columns
+    feature_columns = df_phi.columns
     reward_matrix = np.zeros((NUM_STATES))
     # adjust rmax, rmin to keep w^Tphi(s) <= 1
     reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(len(feature_columns))
@@ -73,10 +88,6 @@ if __name__ == '__main__':
         print('min intermediate rewards: ', np.min(reward_matrix[:-2]))
         print('')
 
-    # initialize max margin irl stuff
-    sample_initial_state = make_initial_state_sampler(df_train)
-    get_state = make_state_centroid_finder(df_centroids, feature_columns)
-    phi = make_phi(df_centroids)
 
     # initalize saving folder
     save_path = initialize_save_data_folder()
@@ -88,62 +99,74 @@ if __name__ == '__main__':
     #    svm_epsilon = 0.01
     #    f.write()
 
-    Q_star_train = Q_value_iteration(transition_matrix_train, np.copy(reward_matrix))
+    Q_star_train = Q_value_iteration(transition_matrix_train, reward_matrix)
     pi_expert_mdp_train = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star_train)
-    Q_star = Q_value_iteration(transition_matrix, np.copy(reward_matrix))
+    Q_star = Q_value_iteration(transition_matrix, reward_matrix)
     pi_expert_mdp = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
 
+    # for now the experiments should be defined as below
     def experiment_1():
         print('EXPERIMENT #1: greedy deterministic clinician expert')
-        experiment_id= 'greedy_physician' + custom_experiment_id
+        experiment_id= 'greedy_physician'
         pi_expert_phy = get_physician_policy(trajectories, is_stochastic=False)
         save_Q(pi_expert_phy.Q, save_path, num_trials, num_iterations,  PHYSICIAN_Q)
 
-        irl_physician_Q_greedy = run_max_margin(transition_matrix_train, np.copy(reward_matrix), pi_expert_phy,
+        res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_phy,
                            sample_initial_state, get_state, phi,
                            num_exp_trajectories, svm_penalty, svm_epsilon,
                        num_iterations, num_trials, experiment_id, save_path,
                             irl_use_stochastic_policy, verbose)
-        save_Q(irl_physician_Q_greedy, save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_GREEDY)
+
+        save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_GREEDY)
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+
 
     def experiment_2():
         print('EXPERIMENT #2: clinician expert (stochastic)')
-        experiment_id= 'stochastic_physician' + custom_experiment_id
+        experiment_id= 'stochastic_physician'
         pi_expert_phy_stochastic = get_physician_policy(trajectories, is_stochastic=True)
-        irl_physician_Q_stochastic = run_max_margin(transition_matrix_train, np.copy(reward_matrix),
+        res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix,
                                          pi_expert_phy_stochastic, sample_initial_state,
                                          get_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
                                          num_iterations, num_trials, experiment_id,
                                         save_path, irl_use_stochastic_policy, verbose)
-        save_Q(irl_physician_Q_stochastic, save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_STOCHASTIC)
+        save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_STOCHASTIC)
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+
 
     def experiment_3():
         print('EXPERIMENT #3: artificial MDP-optimal expert')
-        Q_star = Q_value_iteration(transition_matrix_train, np.copy(reward_matrix))
+        # used transition_matrix because expert can be as good as we want to be
+        Q_star = Q_value_iteration(transition_matrix, reward_matrix)
         pi_expert_mdp = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
         save_Q(pi_expert_mdp.Q, save_path,num_trials, num_iterations, MDP_OPTIMAL_Q)
 
-        experiment_id= 'greedy_mdp' + custom_experiment_id
-        irl_mdp_Q_greedy = run_max_margin(transition_matrix_train, np.copy(reward_matrix), pi_expert_mdp,
+        experiment_id= 'greedy_mdp'
+        res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_mdp,
                            sample_initial_state, get_state, phi,
                            num_exp_trajectories, svm_penalty, svm_epsilon,
                            num_iterations, num_trials, experiment_id,
                           save_path, irl_use_stochastic_policy, verbose)
-        save_Q(irl_mdp_Q_greedy, save_path, num_trials, num_iterations, IRL_MDP_Q_GREEDY)
+        save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_MDP_Q_GREEDY)
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
+
 
     def experiment_4():
         print('EXPERIMENT #4: artificial MDP-optimal expert (stochastic)')
-        Q_star = Q_value_iteration(transition_matrix_train, np.copy(reward_matrix))
+        # used transition_matrix because expert can be as good as we want to be
+        Q_star = Q_value_iteration(transition_matrix, reward_matrix)
         pi_expert_mdp_stochastic = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
 
-        experiment_id= 'stochastic_mdp' + custom_experiment_id
-        irl_mdp_Q_stochastic = run_max_margin(transition_matrix_train, np.copy(reward_matrix), pi_expert_mdp_stochastic,
+        experiment_id= 'stochastic_mdp'
+        res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_mdp_stochastic,
                            sample_initial_state, get_state, phi,
                            num_exp_trajectories, svm_penalty, svm_epsilon,
                            num_iterations, num_trials, experiment_id,
                            save_path, irl_use_stochastic_policy, verbose)
-        save_Q(irl_mdp_Q_stochastic, save_path, num_trials, num_iterations, IRL_MDP_Q_STOCHASTIC)
+        save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_MDP_Q_STOCHASTIC)
+        plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id):
 
+    # here run the experiments
 
     experiment_1()
     experiment_2()
