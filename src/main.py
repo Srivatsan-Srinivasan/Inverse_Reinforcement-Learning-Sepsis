@@ -22,8 +22,8 @@ def plot_experiment(res, save_path, num_trials, num_iterations, img_path, experi
 
 if __name__ == '__main__':
     # set hyperparams here
-    num_trials = 2
-    num_iterations = 2
+    num_trials = 5
+    num_iterations = 15
     svm_penalty = 300.0
     svm_epsilon = 1e-4
     irl_use_stochastic_policy = False
@@ -45,15 +45,18 @@ if __name__ == '__main__':
     # initialize max margin irl stuff
     # preprocess phi
     sample_initial_state = make_initial_state_sampler(df_train)
-    phi = apply_phi_to_centroids(df_centroids, df_train, as_matrix=True)
+    df_phi = apply_phi_to_centroids(df_centroids, df_train)
+    phi = df_phi.as_matrix()
     assert np.all(np.isin(phi, [0, 1])), 'phi should be binary matrix'
 
     # build reward_matrix (not change whether train/val)
-    feature_columns = phi.shape[1]
+    features = df_phi.columns
+    num_features = phi.shape[1]
     reward_matrix = np.zeros((NUM_STATES))
     # adjust rmax, rmin to keep w^Tphi(s) <= 1
-    reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(feature_columns)
-    reward_matrix[TERMINAL_STATE_DEAD]  = -np.sqrt(feature_columns)
+    #TODO experiment
+    reward_matrix[TERMINAL_STATE_ALIVE] = np.sqrt(num_features)
+    reward_matrix[TERMINAL_STATE_DEAD]  = -np.sqrt(num_features)
     assert(np.isclose(np.sum(reward_matrix), 0))
 
     #evaluate_policy_monte_carlo()
@@ -80,7 +83,7 @@ if __name__ == '__main__':
 
     # show the world
     if verbose:
-        print('number of features', len(feature_columns))
+        print('number of features', num_features)
         print('transition_matrix_train size', transition_matrix_train.shape)
         print('reward_matrix size', reward_matrix.shape)
         print('max rewards: ', np.max(reward_matrix))
@@ -114,10 +117,9 @@ if __name__ == '__main__':
         save_Q(pi_expert_phy.Q, save_path, num_trials, num_iterations,  PHYSICIAN_Q)
 
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_phy,
-                           sample_initial_state, phi,
-                           num_exp_trajectories, svm_penalty, svm_epsilon,
+                           sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
                        num_iterations, num_trials, experiment_id, save_path,
-                            irl_use_stochastic_policy, verbose)
+                            irl_use_stochastic_policy, features, verbose)
 
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_GREEDY)
         plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
@@ -129,9 +131,9 @@ if __name__ == '__main__':
         pi_expert_phy_stochastic = get_physician_policy(trajectories, is_stochastic=True)
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix,
                                          pi_expert_phy_stochastic, sample_initial_state,
-                                         get_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
+                                         phi, num_exp_trajectories, svm_penalty, svm_epsilon,
                                          num_iterations, num_trials, experiment_id,
-                                        save_path, irl_use_stochastic_policy, verbose)
+                                        save_path, irl_use_stochastic_policy, features, verbose)
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_PHYSICIAN_Q_STOCHASTIC)
         plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
@@ -145,10 +147,9 @@ if __name__ == '__main__':
 
         experiment_id= 'greedy_mdp'
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_mdp,
-                           sample_initial_state, phi,
-                           num_exp_trajectories, svm_penalty, svm_epsilon,
+                           sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
                            num_iterations, num_trials, experiment_id,
-                          save_path, irl_use_stochastic_policy, verbose)
+                          save_path, irl_use_stochastic_policy, features, verbose)
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_MDP_Q_GREEDY)
         plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
@@ -161,16 +162,15 @@ if __name__ == '__main__':
 
         experiment_id= 'stochastic_mdp'
         res = run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert_mdp_stochastic,
-                           sample_initial_state, phi,
-                           num_exp_trajectories, svm_penalty, svm_epsilon,
+                           sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
                            num_iterations, num_trials, experiment_id,
-                           save_path, irl_use_stochastic_policy, verbose)
+                           save_path, irl_use_stochastic_policy, features, verbose)
         save_Q(res['approx_expert_Q'], save_path, num_trials, num_iterations, IRL_MDP_Q_STOCHASTIC)
         plot_experiment(res, save_path, num_trials, num_iterations, img_path, experiment_id)
 
     # here run the experiments
 
     experiment_1()
-    #experiment_2()
-    experiment_3()
+    experiment_2()
+    #experiment_3()
     #experiment_4()

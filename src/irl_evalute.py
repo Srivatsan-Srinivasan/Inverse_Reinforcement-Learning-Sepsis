@@ -11,10 +11,10 @@ from constants import *
 
 
 def test_against_expert(df, expert_filepath, irl_expert_filepath,
-                        plot_suffix, img_path, date, iter_num, verbose=True):
-    q_star_path = '{}_i{}.npy'.format(expert_filepath, iter_num)
-    irl_path = '{}_i{}.npy'.format(irl_expert_filepath, iter_num)
-    irl_weights_path = '{}_i{}_weights.npy'.format(DATA_PATH + date + plot_suffix, iter_num)
+                        plot_suffix, img_path, date, trial_num, iter_num, verbose=False):
+    q_star_path = '{}_t{}xi{}.npy'.format(expert_filepath, trial_num, iter_num)
+    irl_path = '{}_t{}xi{}.npy'.format(irl_expert_filepath, trial_num, iter_num)
+    irl_weights_path = '{}_t{}xi{}_weights.npy'.format(DATA_PATH + date + plot_suffix, trial_num, iter_num)
 
     Q_star = np.load(q_star_path)[:NUM_PURE_STATES+1, :]
     Q_irl = np.load(irl_path)[:NUM_PURE_STATES+1, :]
@@ -39,20 +39,23 @@ def test_against_expert(df, expert_filepath, irl_expert_filepath,
     KL = lh.get_KL_divergence(pi_physician_stochastic, opt_policy_learned)
 
     print('will save plot results to {}'.format(img_path))
-    eu.plot_KL(KL, plot_suffix=plot_suffix, save_path=img_path, iter_num=iter_num)
-    eu.plot_avg_LL(LL, plot_suffix=plot_suffix, save_path=img_path, iter_num=iter_num)
+    eu.plot_KL(KL, plot_suffix=plot_suffix, save_path=img_path, show=False, iter_num=iter_num,
+               trial_num=trial_num)
+    eu.plot_avg_LL(LL, plot_suffix=plot_suffix, save_path=img_path, show=False, iter_num=iter_num,
+                   trial_num=trial_num)
 
 
 if __name__ == '__main__':
-    df_train, df_val, df_centroids = load_data()
+    df_train, df_val, df_centroids, df_full = load_data()
     df = df_train[df_centroids.columns]
     # for now, this must be set manually
     # example: date = '2016_02_02/'
     # make sure include trailing slash
     # check data folder to see for what dates data are available
-    date = '2017_11_28/'
+    date = '2017_11_29/'
     # pick which models you want manually for now...
-    iter_num = 30
+    trial_num = 5
+    iter_num = 20
     if not os.path.exists(DATA_PATH + date):
         raise Exception('desired date should be specified for loading saved data.')
     else:
@@ -75,10 +78,10 @@ if __name__ == '__main__':
     plot_mdp_greedy_id = 'greedy_mdp'
     plot_mdp_stochastic_id = 'stochastic_mdp'
     test_against_expert(df, greedy_phy_q_filepath, irl_phy_q_greedy_filepath,
-                        plot_phy_greedy_id, img_path, date, iter_num)
+                        plot_phy_greedy_id, img_path, date, trial_num, iter_num)
     test_against_expert(df, stochastic_phy_q_filepath, irl_phy_q_stochastic_filepath,
-                        plot_phy_stochastic_id, img_path, date, iter_num)
+                        plot_phy_stochastic_id, img_path, date, trial_num, iter_num)
     test_against_expert(df, greedy_mdp_q_filepath, irl_mdp_q_greedy_filepath,
-                        plot_mdp_greedy_id, img_path, date, iter_num)
+                        plot_mdp_greedy_id, img_path, date, trial_num, iter_num)
     test_against_expert(df, stochastic_mdp_q_filepath, irl_mdp_q_stochastic_filepath,
-                        plot_mdp_stochastic_id, img_path, date, iter_num)
+                        plot_mdp_stochastic_id, img_path, date, trial_num, iter_num)

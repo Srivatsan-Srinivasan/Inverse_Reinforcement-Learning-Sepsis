@@ -76,6 +76,10 @@ def plot_diff_feature_expectation(dist_mus, num_trials, num_iterations, save_pat
 
 
 def plot_value_function(v_pis, v_pi_expert, num_trials, num_iterations, save_path, plot_prefix='new'):
+    # performance relative to expert
+    v_pis /= v_pi_expert
+    # becomes one
+    v_pi_expert /= v_pi_expert
     avg_v_pis = np.mean(v_pis, axis=0)
     v_pi_se = sem(v_pis, axis=0)
     fig = plt.figure(figsize=(10, 10))

@@ -3,12 +3,19 @@ from scipy.stats import entropy
 import numpy as np
 import math
 import pdb
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set(style='dark', palette='husl')
+sns.set(style='dark', palette='Set1')
 from numpy import mean
 import pandas as pd
 from constants import IMG_PATH
+
+FONT_SIZE = 20
+#font = {'weight' : 'bold',
+#        'size'   : FONT_SIZE}
+#matplotlib.rc('font', **font)
+sns.set(font_scale=2)
 
 #p,q are distributions - p is base distribution and q is approximate
 def KL_divergence(p,q):
@@ -89,7 +96,7 @@ def test_code():
 def sumzip(*items):
     return [sum(values) for values in zip(*items)]
 
-def plot_KL(KL, save_path, plot_suffix, iter_num, show = True, test = True):
+def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test = True):
     KL_IRL = []
     KL_random = []
     KL_vaso_random = []
@@ -111,15 +118,20 @@ def plot_KL(KL, save_path, plot_suffix, iter_num, show = True, test = True):
     test_str = "train"
     if test:
         test_str = "test"
-    plt.title("KL divergences with respect to physician policy in " + test_str + " data" )
-    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-    fig.savefig('{}kl_{}_i{}'.format(save_path, plot_suffix, iter_num), ppi=300, bbox_inches='tight')
+    #plt.title("KL divergences with respect to physician policy in " + test_str + " data" )
+    #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.legend(loc='best', fontsize=FONT_SIZE)
+    plt.xlabel('States', fontsize=FONT_SIZE)
+    plt.ylabel('KL Divergerence', fontsize=FONT_SIZE)
+    fig.savefig('{}kl_{}_t{}xi{}'.format(save_path, plot_suffix, trial_num, iter_num), ppi=300, bbox_inches='tight')
     if show:
         plt.show()
     else:
         return plt
     plt.close()
-def plot_avg_LL(LL, save_path, plot_suffix, iter_num, show = True, test = True):
+
+
+def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, test = True):
     keys = list(LL.keys())
     key_len = len(keys)
     
@@ -148,9 +160,12 @@ def plot_avg_LL(LL, save_path, plot_suffix, iter_num, show = True, test = True):
     data_NLL = pd.DataFrame(np.transpose(np.matrix([NLL_IRL,NLL_random,NLL_no_int])))
     data_NLL.columns = ["IRL", "Random", "No_Intervention"]
     sns.barplot(data=data_NLL, estimator=mean)
+    plt.xlabel('Policies', fontsize=FONT_SIZE)
+    plt.ylabel('Log Likelihood', fontsize=FONT_SIZE)
     #plot.title("Plot showing average negative LL")
-    fig.savefig('{}ll_{}_i{}'.format(save_path, plot_suffix, iter_num), ppi=300, bbox_inches='tight')
-    plt.show()
+    if show:
+        plt.show()
+    fig.savefig('{}ll_{}_t{}xi{}'.format(save_path, plot_suffix, trial_num, iter_num), ppi=300, bbox_inches='tight')
     plt.close()
 
 

@@ -10,7 +10,7 @@ from constants import NUM_STATES, NUM_ACTIONS, DATA_PATH
 
 def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, use_stochastic_policy, verbose):
+                       num_iterations, num_trials, use_stochastic_policy, features, verbose):
 
     '''
     reproduced maximum margin IRL algorithm
@@ -135,8 +135,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
     #    print('')
     #    print('')
     #    print('')
-
-
+    feature_importances = sorted(zip(features, approx_expert_weights), key=lambda x: x[1], reverse=True)
     results = {'margins': margins,
                'dist_mus': dist_mus,
                'v_pis': v_pis,
@@ -144,6 +143,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
                'svm_penlaty': svm_penalty,
                'svm_epsilon': svm_epsilon,
                'approx_expert_weights': approx_expert_weights,
+               'feature_imp': feature_importances,
                'num_exp_trajectories': num_exp_trajectories,
                'approx_expert_Q': approx_expert_Q
               }
@@ -152,7 +152,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
 
 def run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
                     sample_initial_state,  phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                   num_iterations, num_trials, experiment_id, save_path, use_stochastic_policy, verbose):
+                   num_iterations, num_trials, experiment_id, save_path, use_stochastic_policy, features, verbose):
     '''
     returns:
         approximate expert policy
@@ -160,13 +160,18 @@ def run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi
 
     res = _max_margin_learner(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
                        sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, use_stochastic_policy, verbose)
+                       num_iterations, num_trials, use_stochastic_policy, features, verbose)
 
+    print('final weights learned for ', experiment_id)
+    feature_importances = res['feature_imp']
+    top10_pos = feature_importances[:10]
+    top10_neg = feature_importances[-10:]
+    print('top 10 positive weights', top10_pos)
+    print('top 10 negative weights', top10_neg)
+    print('')
     np.save('{}{}_t{}xi{}_result'.format(save_path, experiment_id, num_trials, num_iterations), res)
     np.save('{}{}_t{}xi{}_weights'.format(save_path, experiment_id, num_trials, num_iterations),
             res['approx_expert_weights'])
-    print('final weights learned for ', experiment_id)
-    print(res['approx_expert_weights'])
-    print('')
+
     return res
 

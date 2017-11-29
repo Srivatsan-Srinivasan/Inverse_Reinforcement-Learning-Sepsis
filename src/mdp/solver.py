@@ -186,7 +186,7 @@ def iterate_policy(Q, transition_matrix, reward_matrix, gamma=0.99, theta=1e-2, 
             # the latter condition required to handle an edge case where there are ties
     return Q
 
-def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-3, gamma=0.99):
+def Q_value_iteration(transition_matrix, reward_matrix, theta=1e-2, gamma=0.99):
     '''
     a simplified version of Q value iteration
     reference: slide 9 of http://rll.berkeley.edu/deeprlcourse/f17docs/lecture_6_value_functions.pdf
