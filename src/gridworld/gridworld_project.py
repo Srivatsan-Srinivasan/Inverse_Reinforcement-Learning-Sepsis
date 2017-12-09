@@ -138,8 +138,8 @@ class GridWorld(object):
         Reset the position to a starting position (an 'o'), chosen at random.
         """
         # Since only one 'o' in the maze, so always start at the same position???
-        options = self.maze.flat_positions_not_containing('#')
-        self.state = options[ np.random.choice(len(options)) ]
+        options = self.maze.flat_positions_not_containing('*')
+        self.state = int(options[ np.random.choice(len(options)) ])
 
     def is_terminal(self, state):
         """Check if the given state is a terminal state."""
