@@ -1,5 +1,4 @@
 # custom stuff
-<<<<<<< HEAD
 src/data/**/*.csv
 src/data/**/*.npy
 src/data/**/transition_matrix*
@@ -7,9 +6,6 @@ src/data/transition_matrix*
 src/data/backup/transition_matrix*
 large_files.txt
 -tree 7959887
-=======
-src/data/**/*
->>>>>>> a11ff8f91be1fea168cb935c50cc5cd87bc8ad01
 
 # Byte-compiled / optimized / DLL files
 **/*.pyc
