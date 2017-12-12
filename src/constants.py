@@ -14,13 +14,33 @@ TERMINAL_STATE_DEAD = NUM_STATES - 1
 IMG_PATH = 'img/'
 DATA_PATH = 'data/'
 FILEPATH = DATA_PATH + 'sepsis.csv'
-TRAIN_FILEPATH = DATA_PATH + 'sepsis.csv'
-TEST_FILEPATH = DATA_PATH + 'sepsis.csv'
-CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data.csv'
-CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data.csv'
+
+TRAIN_FILEPATH = DATA_PATH + 'Sepsis_imp_train.csv'
+TRAIN_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_train.csv'
+TRAIN_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_train.csv'
+
+VALIDATE_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
+VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_val.csv'
+# we don't use this for now
+VALIDATE_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_val.csv'
+
+TRAIN_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_train.npy'
+TRAIN_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_train.npy'
+TRAIN_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix_train.npy'
+
 TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories.npy'
 TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
-REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_table.npy'
+REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix.npy'
+
+# since these are experiment-specific, we save them to
+# save_path = data/today_date/
+PHYSICIAN_Q = 'physician_q'
+MDP_OPTIMAL_Q = 'mdp_optimal_q'
+IRL_PHYSICIAN_Q_GREEDY = 'irl_physician_q_greedy'
+IRL_PHYSICIAN_Q_STOCHASTIC ='irl_physician_q_stochastic'
+IRL_MDP_Q_GREEDY = 'irl_mdp_q_greedy'
+IRL_MDP_Q_STOCHASTIC = 'irl_mdp_q_stochastic'
+
 Q_STAR_FILEPATH = DATA_PATH + 'q_star.npy'
 Q_CLINICIAN_FILEPATH = DATA_PATH + 'q_clinician.npy'
 VF_CLINICIAN_FILEPATH  = DATA_PATH + 'vf_clinician.npy'
@@ -66,16 +86,18 @@ CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 #COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX 
 # TODO: this does not make sense but will fix later
 # when we do clustering other than kmeans
-COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
 ETC = ['age', 'charttime']
-
+COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
+# NEW UPDATE TO MAKE IT COMPATIBLE WITH PHI(S)
+#BINARY_COLS = ['gender', 're_admission', 'sedation', 'mechvent', 'rrt', 'died_in_hosp', 'mortality_90d']
+#COLS_TO_BE_NORMALIZED = list(set(COLS_TO_BE_NORMALIZED) - set(BINARY_COLS))
 COLS_TO_BE_LOGGED=  ['SpO2','Glucose','BUN','Creatinine', 'SGOT', 'SGPT','Total_bili','WBC_count',
         'Platelets_count', 'PTT','PT','INR','paO2','paCO2','Arterial_lactate','PaO2_FiO2',
         'GCS', 'Shock_Index']
 
 ALREADY_NORMAL_LOGGED = list(set(COLS_TO_BE_NORMALIZED) - set(COLS_TO_BE_LOGGED))
 
-INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state_cluster']
+INTEGER_COLS = OUTCOMES + ['age', 'bloc', 'SOFA', 'state', 'icustayid']
 
 # gender, age, readmission, rrt, vent, sedation could be excluded
 COLS_NOT_FOR_CLUSTERING = ['icustayid', 'charttime', 'bloc']

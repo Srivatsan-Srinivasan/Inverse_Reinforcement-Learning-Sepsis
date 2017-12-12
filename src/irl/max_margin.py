@@ -1,129 +1,176 @@
-from mdp.solver import solve_mdp
+import numpy as np
+from tqdm import tqdm
+from mdp.solver import Q_value_iteration
 from policy.custom_policy import get_physician_policy
-from policy.policy import GreedyPolicy, RandomPolicy
+from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
 from irl.irl import *
 from optimize.quad_opt import QuadOpt
-from constants import *
+from constants import NUM_STATES, NUM_ACTIONS, DATA_PATH
 
-import matplotlib.pyplot as plt
-from scipy.optimize.minpack import curve_fit
-import seaborn as sns
-sns.set(style='dark', palette='husl')
+def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
+                       sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
+                       num_iterations, num_trials, use_stochastic_policy, features, verbose):
 
-def max_margin_learner(df_cleansed, df_centroids, feature_columns,
-                   trajectories, transition_matrix, reward_matrix,
-                   num_iterations=50, epsilon=0.01):
     '''
     reproduced maximum margin IRL algorithm
     described in Apprenticeship Learning paper (Abbeel and Ng, 2002)
     with Quadratic Programming
+    returns:
+    results = {'margins': margins,
+               'dist_mus': dist_mus,
+               'v_pis': v_pis,
+               'v_pi_expert': v_pi_expert,
+               'svm_penlaty': svm_penalty,
+               'svm_epsilon': svm_epsilon,
+               'approx_expert_weights': approx_expert_weights,
+               'num_exp_trajectories': num_exp_trajectories,
+               'approx_expert_Q': approx_expert_Q
+              }
+    it is important we use only transition_matrix_train for training
+    when testing, we will use transition_matrix, which is a better approximation of the world
     '''
-    # initialize utility functions and key variables
-    sample_initial_state = make_initial_state_sampler(df_cleansed)
-    get_state = make_state_centroid_finder(df_centroids, feature_columns)
-    phi = make_phi(df_centroids)
-    opt = QuadOpt(epsilon)
-    
-    # step 0: initialize
-    #np.random.seed(1)
-    #alphas = np.ones(len(feature_columns))
-    #W_expert = np.random.dirichlet(alphas, size=1)[0]
-    #W_star = np.random.dirichlet(alphas, size=1)[0]
+    mu_pi_expert, v_pi_expert = estimate_feature_expectation(transition_matrix_train, sample_initial_state, phi, pi_expert)
+    if verbose:
+        print('objective: get close to ->')
+        print('avg mu_pi_expert', np.mean(mu_pi_expert))
+        print('v_pi_expert', v_pi_expert)
+        print('')
 
-    # get pi_expert
-    pi_expert = get_physician_policy(trajectories)
-    mu_pi_expert = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_expert)
-
-    # get pi_star (mdp solution)
-    pi_star = solve_mdp(transition_matrix, np.mean(reward_matrix, axis=1))
-    mu_pi_star = estimate_feature_expectation(transition_matrix, sample_initial_state, get_state, phi, pi_star)
-
-    # step 1: initialize pi_tilda and mu_pi_tilda
-    pi_tilda = RandomPolicy(NUM_STATES, NUM_ACTIONS)
-    mu_pi_tilda = estimate_feature_expectation(transition_matrix,
-                                                       sample_initial_state,
-                                                       get_state, phi, pi_tilda)
-    
     # initialize vars for plotting
-    margins = []
-    margins_star = []
-    dist_mus = np.zeros(num_iterations)
-    dist_mus_star = np.zeros(num_iterations)
-    #v_pis = []
-    #v_pis_star = []
+    margins = np.full((num_trials, num_iterations), 10000)
+    dist_mus = np.full((num_trials, num_iterations), 10000)
+    v_pis = np.zeros((num_trials, num_iterations))
+    intermediate_reward_matrix = np.zeros((reward_matrix.shape))
+    approx_exp_policies = np.array([None] * num_trials)
+    approx_exp_weights = np.array([None] * num_trials)
+    
 
-    for i in range(num_iterations):
-        print('iteration at {}/{} pi_expert'.format(i+1, num_iterations))
-        # step 2: solve qp
-        W_expert, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
-        
-        # step 3: terminate if margin <= epsilon
-        if not converged:
+    for trial_i in tqdm(range(num_trials)):
+        if verbose:
+            print('max margin IRL starting ... with {}th trial'.format(1+trial_i))
+
+        # step 1: initialize pi_tilda and mu_pi_tilda
+        pi_tilda = RandomPolicy(NUM_PURE_STATES, NUM_ACTIONS)
+        mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(transition_matrix_train,
+                                                           sample_initial_state,
+                                                           phi, pi_tilda)
+        opt = QuadOpt(epsilon=svm_epsilon, penalty=svm_penalty)
+        best_actions_old = None
+        W_old = None
+        pi_tildas = np.array([None]*num_iterations)
+        weights = np.array([None]*num_iterations)
+        for i in range(num_iterations):
+            # step 2: solve qp
+            W, converged, margin = opt.optimize(mu_pi_expert, mu_pi_tilda)
+            # step 3: terminate if margin <= epsilon
+            if converged:
+                print('margin coverged with', margin)
+                break
+
+            weights[i] = W
             # step 4: solve mdpr
-            compute_reward = make_reward_computer(W_expert, get_state, phi)
+            compute_reward = make_reward_computer(W, phi)
             reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
-            #pi_tilda = solve_mdp(transition_matrix, reward_matrix)
-            pi_tilda = pi_expert
-            
+            Q_star = Q_value_iteration(transition_matrix_train, reward_matrix)
+            if use_stochastic_policy:
+                pi_tilda = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+            else:
+                pi_tilda = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
+            pi_tildas[i] = pi_tilda
             # step 5: estimate mu pi tilda
-            mu_pi_tilda = estimate_feature_expectation(transition_matrix,
-                                                       sample_initial_state,
-                                                       get_state, phi, pi_tilda)
+            mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(
+                                   transition_matrix_train,
+                                   sample_initial_state,
+                                   phi, pi_tilda)
+            dist_mu = np.linalg.norm(mu_pi_tilda - mu_pi_expert, 2)
+            if verbose:
+                # intermediate reeport for debugging
+                print('max intermediate rewards: ', np.max(reward_matrix[:-2]))
+                print('avg intermediate rewards: ', np.mean(reward_matrix[:-2]))
+                print('min intermediate rewards: ', np.min(reward_matrix[:-2]))
+                print('sd intermediate rewards: ', np.std(reward_matrix[:-2]))
+                best_actions = np.argmax(Q_star, axis=1)
+                if best_actions_old is not None:
+                    actions_diff = np.sum(best_actions != best_actions_old)
+                    actions_diff /= best_actions.shape[0]
+                    print('(approx.) argmax Q changed (%)', 100*actions_diff)
+                    best_actions_old = best_actions
 
-        # step 6: saving plotting vars
-        dist_mu = np.linalg.norm(mu_pi_tilda - mu_pi_expert, 2)
-        dist_mus[i] = dist_mu
-        margins.append(margin)
-        print('dist_mu', dist_mu)
-        print('margin', margin)
-        #v_pi = estimate_v_pi_tilda(W_expert, mu_pi_tilda, sample_initial_state)
-        #v_pis.append(v_pi)
+                if W_old is not None:
+                    print('weight difference (l2 norm)', np.linalg.norm(W_old - W, 2))
+                W_old = W
+                print('avg mu_pi_tilda', np.mean(mu_pi_tilda))
+                print('dist_mu', dist_mu)
+                print('margin', margin)
+                print('v_pi', v_pi_tilda)
+                print('')
 
-    # the same process for mdp expert
-    for i in range(num_iterations):
-        print('iteration at {}/{} for pi_star'.format(i+1, num_iterations))
-        # step 2: solve qp
-        W_star, converged, margin = opt.optimize(mu_pi_star, mu_pi_tilda)
-        
-        # step 3: terminate if margin <= epsilon
-        if not converged:
-            # step 4: solve mdpr
-            compute_reward = make_reward_computer(W_star, get_state, phi)
-            reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_STATES)])
-            pi_tilda = solve_mdp(transition_matrix, reward_matrix)
-            # step 5: estimate mu pi tilda
-            mu_pi_tilda = estimate_feature_expectation(transition_matrix,
-                                                       sample_initial_state,
-                                                       get_state, phi, pi_tilda)
+            # step 6: saving plotting vars
+            dist_mus[trial_i, i] = dist_mu
+            margins[trial_i, i] = margin
+            v_pis[trial_i, i] = v_pi_tilda
+            intermediate_reward_matrix += reward_matrix
+        # find a near-optimal policy from a policy reservoir
+        # taken from Abbeel (2004)
+        # TODO: retrieve near-optimal expert policy
+        min_margin_iter_idx = np.argmin(margins[trial_i])
+        approx_exp_weights[trial_i] = weights[min_margin_iter_idx]
+        approx_exp_policies[trial_i] = pi_tildas[min_margin_iter_idx].Q
+        if verbose:
+            print('best weights at {}th trial'.format(trial_i), weights[min_margin_iter_idx])
+            print('best Q at {}th trial'.format(trial_i), pi_tildas[min_margin_iter_idx].Q)
 
-        print('dist_mu', dist_mu)
-        print('margin', margin)
-        # step 6: saving plotting vars
-        dist_mu = np.linalg.norm(mu_pi_tilda - mu_pi_star, 2)
-        dist_mus_star[i] = dist_mu
-        margins_star.append(margin)
+    # there will be a better way to do a policy selection
+    approx_expert_weights = np.mean(approx_exp_weights, axis=0)
+    approx_expert_Q = np.mean(approx_exp_policies, axis=0)
 
-    fig = plt.figure(figsize=(10, 10))
-    plt.plot(margins, label='vs. pi_expert')
-    plt.plot(margins_star, label='vs. pi_star')
-    plt.xlabel('Number of iterations')
-    plt.ylabel('SVM margin')
-    plt.legend()
-    plt.savefig('{}margin_{}_iter'.format(IMG_PATH, num_iterations), ppi=300, bbox_inches='tight')
+    # test here
+    #pi_irl_greedy = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, approx_expert_Q)
+    #pi_irl_stochastic = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, approx_expert_Q)
+    #v_expert = evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi_expert)
+    #v_irl_greedy = evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi_irl_greedy)
+    #v_irl_stochastic = evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi_irl_stochastic)
+    #if verbose:
+    #    print('')
+    #    print('')
+    #    print('')
+    feature_importances = sorted(zip(features, approx_expert_weights), key=lambda x: x[1], reverse=True)
+    results = {'margins': margins,
+               'dist_mus': dist_mus,
+               'v_pis': v_pis,
+               'v_pi_expert': v_pi_expert,
+               'svm_penlaty': svm_penalty,
+               'svm_epsilon': svm_epsilon,
+               'approx_expert_weights': approx_expert_weights,
+               'feature_imp': feature_importances,
+               'num_exp_trajectories': num_exp_trajectories,
+               'approx_expert_Q': approx_expert_Q
+              }
+    return results
 
-    fig = plt.figure(figsize=(10, 10))
-    plt.plot(dist_mus, label='vs. pi_expert')
-    plt.plot(dist_mus_star, label='vs. pi_star')
-    plt.xlabel('Number of iterations')
-    plt.ylabel("Distance to the expert's feature expectation")
-    plt.legend()
-    plt.savefig('{}distance_{}_iter'.format(IMG_PATH, num_iterations), ppi=300, bbox_inches='tight')
 
-    #fig = plt.figure(figsize=(10, 10))
-    #plt.plot(v_pis, label='vs. performance_expert')
-    #plt.plot(v_pis_star, label='vs. perfomrance_star')
-    #plt.xlabel('Number of iterations')
-    #plt.ylabel('v_pi_tilda compared to v_pi_expert/star')
-    #plt.legend()
-    #plt.savefig('{}value_{}_iter'.format(IMG_PATH, num_iterations), ppi=300, bbox_inches='tight')
+def run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
+                    sample_initial_state,  phi, num_exp_trajectories, svm_penalty, svm_epsilon,
+                   num_iterations, num_trials, experiment_id, save_path, use_stochastic_policy, features, verbose):
+    '''
+    returns:
+        approximate expert policy
+    '''
+
+    res = _max_margin_learner(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
+                       sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
+                       num_iterations, num_trials, use_stochastic_policy, features, verbose)
+
+    print('final weights learned for ', experiment_id)
+    feature_importances = res['feature_imp']
+    top10_pos = feature_importances[:10]
+    top10_neg = feature_importances[-10:]
+    print('top 10 positive weights', top10_pos)
+    print('top 10 negative weights', top10_neg)
+    print('')
+    np.save('{}{}_t{}xi{}_result'.format(save_path, experiment_id, num_trials, num_iterations), res)
+    np.save('{}{}_t{}xi{}_weights'.format(save_path, experiment_id, num_trials, num_iterations),
+            res['approx_expert_weights'])
+
+    return res
 

@@ -178,7 +178,7 @@ class GridWorld(object):
         reward = self.rewards.get(self.maze.get_flat(self.state), 0) + self.rewards.get(result, 0)
         return self.observe(), reward
 
-    def as_mdp(self):
+    def as_mdp(self, include_action_rewards=False):
         transition_probabilities = np.zeros((self.num_states, self.num_actions, self.num_states))
         rewards = np.zeros((self.num_states, self.num_actions, self.num_states))
         action_rewards = np.zeros((self.num_states, self.num_actions))
@@ -208,8 +208,11 @@ class GridWorld(object):
         rewards_given_random_action = action_rewards.mean(axis=1, keepdims=True)
         # TODO: because of random noise, you may not get the action_reward
         action_rewards = (1 - self.action_error_prob) * action_rewards + self.action_error_prob * rewards_given_random_action
-        rewards = action_rewards[:, :, None] + destination_rewards[None, None, :]
-        rewards[is_terminal_state] = 0
+        if include_action_rewards:
+            rewards = action_rewards[:, :, None] + destination_rewards[None, None, :]
+            rewards[is_terminal_state] = 0
+        else:
+            rewards = destination_rewards
 
         return transition_probabilities, rewards
 
