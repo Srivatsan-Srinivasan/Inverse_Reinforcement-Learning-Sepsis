@@ -19,6 +19,18 @@ TRAIN_FILEPATH = DATA_PATH + 'Sepsis_imp_train.csv'
 TRAIN_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_train.csv'
 TRAIN_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_train.csv'
 
+# PCA starts
+TRAIN_CLEANSED_PCA_DATA_FILEPATH = DATA_PATH + 'cleansed_data_pca_train.csv'
+TRAIN_CENTROIDS_PCA_DATA_FILEPATH = DATA_PATH + 'centroids_data_pca_train.csv'
+VALIDATE_CLEANSED_PCA_DATA_FILEPATH = DATA_PATH + 'cleansed_data_pca_val.csv'
+
+TRAIN_TRAJECTORIES_PCA_FILEPATH = DATA_PATH + 'trajectories_pca_train.npy'
+TRAIN_TRANSITION_MATRIX_PCA_FILEPATH = DATA_PATH + 'transition_pca_matrix_train.npy'
+
+TRAJECTORIES_PCA_FILEPATH = DATA_PATH + 'trajectories_pca.npy'
+TRANSITION_MATRIX_PCA_FILEPATH = DATA_PATH + 'transition_matrix_pca.npy'
+# PCA ends
+
 VALIDATE_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
 VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_val.csv'
 # we don't use this for now
@@ -69,7 +81,7 @@ INTERVENTIONS = ['input_total_tev','input_4hourly_tev','median_dose_vaso' ,'max_
 
 TRUE_INTERVENTIONS = ['median_dose_vaso', 'max_dose_vaso', 'input_total_tev', 'input_4hourly_tev', 'cumulated_balance_tev', 'sedation', 'mechvent', 'rrt']
 
-# shock_index is a ratio 
+# shock_index is a ratio
 SUMMARY_INDEX = ['elixhauser', 'SOFA', 'SIRS', 'GCS', 'Shock_Index']
 
 TIME = ['bloc', 'charttime']
@@ -80,10 +92,10 @@ OUTCOMES = ['died_in_hosp', 'mortality_90d']
 CATEGORICAL_ORDINAL = SUMMARY_INDEX + ['bloc']
 CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 # numerical should not be scale-invariant?
-# does it make sense to interprete the mean of these multiplied by some constant? 
+# does it make sense to interprete the mean of these multiplied by some constant?
 # if yes, it should go here
 # we don't normalize interventions
-#COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX 
+#COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX
 # TODO: this does not make sense but will fix later
 # when we do clustering other than kmeans
 ETC = ['age', 'charttime']

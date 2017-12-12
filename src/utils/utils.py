@@ -39,13 +39,16 @@ def detect_binary_value_columns(df):
     return [col for col in df if df[col].dropna().value_counts().index.isin([0,1]).all()]
 
 
-def load_data():
+def load_data(generate_new_data=False):
     num_states = NUM_STATES - NUM_TERMINAL_STATES
-    if os.path.isfile(TRAIN_CLEANSED_DATA_FILEPATH) and os.path.isfile(VALIDATE_CLEANSED_DATA_FILEPATH):
+    if not generate_new_data and os.path.isfile(TRAIN_CLEANSED_DATA_FILEPATH) and os.path.isfile(VALIDATE_CLEANSED_DATA_FILEPATH):
         print('loading preprocessed data as they already exist')
         df_cleansed_train = _load_data(TRAIN_CLEANSED_DATA_FILEPATH)
         df_cleansed_val = _load_data(VALIDATE_CLEANSED_DATA_FILEPATH)
         df_centroids_train = _load_data(TRAIN_CENTROIDS_DATA_FILEPATH)
+        df_cleansed_pca_train = _load_data(TRAIN_CLEANSED_PCA_DATA_FILEPATH)
+        df_cleansed_pca_val = _load_data(VALIDATE_CLEANSED_PCA_DATA_FILEPATH)
+        df_centroids_pca_train = _load_data(TRAIN_CENTROIDS_PCA_DATA_FILEPATH)
     else:
         print('processing data from scratch')
         df_train = _load_data(TRAIN_FILEPATH)
@@ -63,29 +66,75 @@ def load_data():
         # separate x mu y from df
         X_train, mu_train, y_train, X_val, mu_val, y_val = \
                 separate_X_mu_y(df_norm_train, df_norm_val, ALL_VALUES)
+
+        # save for for pca before clustering
+        X_pca_train = X_train.copy()
+        X_pca_val = X_val.copy()
+
         # k-means clustering to consturct discrete states
         print('clustering for states')
         X_to_cluster_train = X_train.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
         X_to_cluster_val = X_val.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
         df_centroids_train, X_clustered_train, X_clustered_val = \
             clustering(X_to_cluster_train, X_to_cluster_val, k=num_states, batch_size=300)
-        X_train['state'] = X_clustered_train
-        X_val['state'] = X_clustered_val
         # stitching up
         print('saving processed data')
-        df_cleansed_train = pd.concat([X_train, mu_train, y_train], axis=1)
-        df_cleansed_val = pd.concat([X_val, mu_val, y_val], axis=1)
+        df_cleansed_train = pd.concat([X_clustered_train, X_train, mu_train, y_train], axis=1)
+        df_cleansed_val = pd.concat([X_clustered_val,  X_val, mu_val, y_val], axis=1)
         df_centroids_train.to_csv(TRAIN_CENTROIDS_DATA_FILEPATH, index=False)
         df_cleansed_train.to_csv(TRAIN_CLEANSED_DATA_FILEPATH, index=False)
         df_cleansed_val.to_csv(VALIDATE_CLEANSED_DATA_FILEPATH, index=False)
 
+        # PCA
+        print('applying pca')
+        # remove columns not relevant for pca or clustering
+        X_meta_train = X_pca_train[COLS_NOT_FOR_CLUSTERING].copy().astype(int)
+        X_meta_val = X_pca_val[COLS_NOT_FOR_CLUSTERING].copy().astype(int)
+
+        X_pca_train = X_pca_train.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        X_pca_val = X_pca_val.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        X_pca_train , X_pca_val  = apply_pca([X_pca_train, X_pca_val])
+
+        # k-means clustering to consturct discrete states
+        print('clustering for pca features')
+        df_centroids_pca_train, X_pca_clustered_train, X_pca_clustered_val = \
+                clustering(X_pca_train, X_pca_val, k=num_states, batch_size=300)
+        # stitching up
+        print('saving processed pca data')
+        to_concat_train = [X_pca_clustered_train, mu_train['action'], X_meta_train, X_pca_train, y_train['died_in_hosp']]
+        to_concat_val = [X_pca_clustered_val, mu_val['action'], X_meta_val, X_pca_val, y_val['died_in_hosp']]
+        df_cleansed_pca_train = pd.concat(to_concat_train, axis=1)
+        df_cleansed_pca_val = pd.concat(to_concat_val, axis=1)
+        df_centroids_pca_train.to_csv(TRAIN_CENTROIDS_PCA_DATA_FILEPATH, index=False)
+        df_cleansed_pca_train.to_csv(TRAIN_CLEANSED_PCA_DATA_FILEPATH, index=False)
+        df_cleansed_pca_val.to_csv(VALIDATE_CLEANSED_PCA_DATA_FILEPATH, index=False)
+
     assert not df_cleansed_train.isnull().values.any(), "there's null values in df_cleansed_train"
     assert not df_cleansed_val.isnull().values.any(), "there's null values in df_cleansed_val"
     assert not df_centroids_train.isnull().values.any(), "there's null values in df_centroids_train"
+
+    assert not df_cleansed_pca_train.isnull().values.any(), "there's null values in df_cleansed_pca_train"
+    assert not df_cleansed_pca_val.isnull().values.any(), "there's null values in df_cleansed_pca_val"
+    assert not df_centroids_pca_train.isnull().values.any(), "there's null values in df_centroids_pca_train"
     # we don't load full data
     # if need be, it's easy to add them
     df_full = pd.concat([df_cleansed_train, df_cleansed_val], axis=0, ignore_index=True)
-    return df_cleansed_train, df_cleansed_val, df_centroids_train, df_full
+    df_pca_full = pd.concat([df_cleansed_pca_train, df_cleansed_pca_val], axis=0, ignore_index=True)
+    data = {
+        'original': {
+            'train': df_cleansed_train,
+            'val' : df_cleansed_val,
+            'centroids': df_centroids_train,
+            'full': df_full
+           },
+        'pca': {
+            'train': df_cleansed_pca_train,
+            'val' : df_cleansed_pca_val,
+            'centroids': df_centroids_pca_train,
+            'full': df_pca_full
+            }
+    }
+    return data
 
 def _load_data(path):
     df = pd.read_csv(path)
@@ -220,8 +269,8 @@ def separate_X_mu_y(df_train, df_val, cols=None):
     mu_train['action'] = actions_train
     mu_val['action'] = actions_val
 
-    y_train = df_train[OUTCOMES]
-    y_val = df_val[OUTCOMES]
+    y_train = df_train[OUTCOMES].astype(int)
+    y_val = df_val[OUTCOMES].astype(int)
 
     if cols is None:
         default_cols = set(ALL_VALUES) - set(OUTCOMES)
@@ -234,14 +283,24 @@ def separate_X_mu_y(df_train, df_val, cols=None):
     return X_train, mu_train, y_train, X_val, mu_val, y_val
 
 
+def apply_pca(dataframes, n_components=None):
+    if n_components is None:
+        n_components = len(dataframes[0].columns)
+    pca = PCA(n_components=n_components)
+    # fit on the df_train
+    pca.fit(dataframes[0])
+    pca_results = []
+    for df in dataframes:
+        X_pca = pd.DataFrame(pca.transform(df), columns=np.arange(n_components))
+        pca_results.append(X_pca)
+    return pca_results
 
-def apply_pca(X):
-    pca = PCA(n_components=2)
-    pca.fit(X)
-    X_pca = pca.transform(X)
-    # explained variance of the first column is already 99%
-    X_pca = pd.DataFrame(X_pca, columns=list('AB'))
-    return X_pca
+def inverse_pca(df, n_components=None):
+    if n_components is None:
+        n_components = len(df.columns)
+    p = PCA(n_components=n_components)
+    X = p.fit_transform(df)
+    return p.inverse_transform(X)
 
 
 def clustering(X_train, X_val, k=2000, batch_size=100):
@@ -252,8 +311,8 @@ def clustering(X_train, X_val, k=2000, batch_size=100):
     X_centroids_train = mbk.cluster_centers_
     df_centroids_train = pd.DataFrame(X_centroids_train, columns=X_train.columns)
 
-    X_clustered_train = pd.Series(mbk.predict(X_train))
-    X_clustered_val = pd.Series(mbk.predict(X_val))
+    X_clustered_train = pd.Series(mbk.predict(X_train), name='state')
+    X_clustered_val = pd.Series(mbk.predict(X_val), name='state')
     return df_centroids_train, X_clustered_train, X_clustered_val
 
 
@@ -327,15 +386,16 @@ def compute_terminal_state_reward(s, num_features):
     else:
         raise Exception('not recognizing this terminal state: '.foramt(s))
 
-
-def apply_phi_to_centroids(df_cent, df_train, as_matrix=False):
+def apply_phi_to_centroids(df_cent, df_train, bins=None, as_matrix=False):
     '''
     phi criteria are learned from df_trani
     convert centroid values into quartile-based bins
     create dummy variable so every column is one or zero
     '''
-    criteria = df_train.describe().loc[['min', '25%', '50%', '75%', 'max']]
-    # pandas cut does not see to support vectorize version
+    if bins is None:
+        bins = ['min', '25%', '50%', '75%', 'max']
+    criteria = df_train.describe().loc[bins]
+    # pandas cut does not see to support vectorized version
     binned_columns = []
 
     for c in df_cent:
