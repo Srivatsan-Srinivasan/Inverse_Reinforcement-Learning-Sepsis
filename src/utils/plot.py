@@ -3,13 +3,14 @@ import scipy as sp
 import matplotlib
 from matplotlib import pyplot as plt
 import seaborn as sns
-from scipy.stats import sem
 sns.set(style='dark', palette='Set1')
-from constants import IMG_PATH
+from scipy.stats import sem
+from constants import IMG_PATH, NUM_PURE_STATES, NUM_ACTIONS
 FONT_SIZE = 20
 font = {'weight' : 'bold',
         'size'   : FONT_SIZE}
 matplotlib.rc('font', **font)
+np.set_printoptions(precision=6)
 
 def plot_hyperplane(X, xx, yy):
     '''
@@ -53,7 +54,6 @@ def plot_margin_expected_value(margins, num_trials, num_iterations, save_path, p
     plt.close()
 
 
-
 def plot_diff_feature_expectation(dist_mus, num_trials, num_iterations, save_path, plot_prefix='new'):
     '''
     plot l2 distance between mu_expert and mu_pi_tilda
@@ -67,12 +67,11 @@ def plot_diff_feature_expectation(dist_mus, num_trials, num_iterations, save_pat
                  yerr=dist_se, fmt='-o', lw=3)
     plt.tick_params(labelsize=FONT_SIZE)
     plt.xticks(np.arange(1, num_iterations+1, 5))
-    plt.xlabel('Number of iterations',fontsize=FONT_SIZE)
+    plt.xlabel('Number of iterations', fontsize=FONT_SIZE)
     plt.ylabel('L2 Distance in Feature Expectation', fontsize=FONT_SIZE)
     plt.legend()
     plt.savefig('{}{}_dist_mu_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
-
 
 
 def plot_value_function(v_pis, v_pi_expert, num_trials, num_iterations, save_path, plot_prefix='new'):
@@ -98,8 +97,80 @@ def plot_value_function(v_pis, v_pi_expert, num_trials, num_iterations, save_pat
     plt.savefig('{}{}_v_pi_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
-def plot_intermediate_rewards():
+def plot_performance_vs_trajectories(save_path,
+                                     plot_prefix,
+                                     num_trials,
+                                     num_iterations,
+                                     v_pi_irl_gs,
+                                     v_pi_irl_ss,
+                                     v_pi_expert):
     '''
     TODO: need to be implemented
     '''
-    pass
+    import pdb;pdb.set_trace()
+    v_pi_irl_gs /= v_pi_expert
+    v_pi_irl_ss /= v_pi_expert
+    fig, ax = plt.subplot(figsize=(10,10))
+    ax.plot(v_pi_irl_g, label='greedy')
+    ax.plot(v_pi_irl_s, label='stochastic')
+    ax.axhline(v_pi_expert, label='expert', c='c', lw=3)
+    ax.set_xlabel('Number of Expert Trajectories')
+    ax.set_ylabel('Value of Policy')
+    ax.legend(loc='best')
+    fig.savefig('{}{}_performance_vs_traj_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
+    plt.close()
+
+
+def plot_deviation_from_experts(pi_expert_s,
+                                pi_irl_s,
+                                save_path,
+                                plot_prefix,
+                                num_trials,
+                                num_iterations):
+    # hyperparameters
+    thresholds = np.arange(0.01, 0.21, 0.03)
+    pi_expert_probs = pi_expert_s.query_Q_probs()
+    pi_irl_probs = pi_irl_s.query_Q_probs()
+    violations = np.zeros((len(thresholds), NUM_PURE_STATES))
+    for i, th in enumerate(thresholds):
+        for s in range(NUM_PURE_STATES):
+            low_p_action_indices = np.flatnonzero(pi_expert_probs[s,:] <= th)
+            num_violations = np.sum(pi_irl_probs[s, low_p_action_indices] > th)
+            violations[i, s] = 0 if len(low_p_action_indices) == 0 else num_violations / len(low_p_action_indices)
+        violations[i] = 100 * np.array(sorted(violations[i], reverse=True))
+
+    fig= plt.figure(figsize=(10,10))
+    for i, th in enumerate(thresholds):
+        plt.plot(violations[i, :], label='threshold: {:.2f}%'.format(100.0 * th))
+    quartiles = np.arange(5)/4.0
+    plt.xticks(np.around(750 * quartiles), quartiles)
+    plt.legend(loc='best')
+    plt.xlabel('States', size=FONT_SIZE)
+    plt.ylabel('Proportion of Violations (%)', size=FONT_SIZE)
+    fig.savefig('{}{}_violations_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
+    plt.close()
+
+
+def plot_intermediate_rewards_vs_mortality(intermediate_rewards,
+                                           avg_mortality_per_state,
+                                           save_path,
+                                           plot_prefix,
+                                           num_trials,
+                                           num_iterations):
+    fig = plt.figure(figsize=(10,10))
+    sc = plt.scatter(np.arange(len(intermediate_rewards)), sorted(intermediate_rewards, reverse=True), c=avg_mortality_per_state, cmap='Reds', label='hello world')
+    plt.axhline(1, c='b', lw=3, linestyle='--')
+    plt.axhline(-1, c='b', lw=3, linestyle='--')
+    plt.legend(loc='best')
+    plt.xlabel('States')
+    plt.ylabel('Intermediate Rewards')
+    plt.colorbar(sc)
+    fig.savefig('{}{}_intermediate_rewards_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
+    plt.close()
+
+
+
+
+
+
+

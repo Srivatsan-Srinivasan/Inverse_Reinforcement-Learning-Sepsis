@@ -7,9 +7,42 @@ from irl.irl import *
 from optimize.quad_opt import QuadOpt
 from constants import NUM_STATES, NUM_ACTIONS, DATA_PATH
 
-def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
-                       sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, use_stochastic_policy, features, verbose):
+class MaxMarginLearner():
+    def __init__(self,
+                 transition_matrix_train,
+                 transition_matrix,
+                 reward_matrix,
+                 pi_expert,
+                 initial_state_probs,
+                 phi,
+                 num_exp_trajectories,
+                 svm_penalty,
+                 svm_epsilon,
+                 num_iterations,
+                 num_trials,
+                 use_stochastic_policy,
+                 features,
+                 verbose):
+        pass
+
+    def learn(self):
+        pass
+
+def run_max_margin(transition_matrix_train,
+                    transition_matrix,
+                    reward_matrix,
+                    pi_expert,
+                    initial_state_probs,
+                    phi,
+                    num_exp_trajectories,
+                    svm_penalty,
+                    svm_epsilon,
+                    num_iterations,
+                    num_trials,
+                    use_stochastic_policy,
+                    features,
+                    hyperplane_margin,
+                    verbose):
 
     '''
     reproduced maximum margin IRL algorithm
@@ -29,7 +62,11 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
     it is important we use only transition_matrix_train for training
     when testing, we will use transition_matrix, which is a better approximation of the world
     '''
-    mu_pi_expert, v_pi_expert = estimate_feature_expectation(transition_matrix_train, sample_initial_state, phi, pi_expert)
+    mu_pi_expert, v_pi_expert = estimate_feature_expectation(transition_matrix,
+                                                             initial_state_probs,
+                                                             phi,
+                                                             pi_expert,
+                                                             num_trajectories=num_exp_trajectories)
     if verbose:
         print('objective: get close to ->')
         print('avg mu_pi_expert', np.mean(mu_pi_expert))
@@ -37,13 +74,15 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
         print('')
 
     # initialize vars for plotting
-    margins = np.full((num_trials, num_iterations), 10000)
-    dist_mus = np.full((num_trials, num_iterations), 10000)
+    # initialize this with 10000.0 because if may converge
+    # in the middle
+    margins = np.full((num_trials, num_iterations), 10000.0)
+    dist_mus = np.full((num_trials, num_iterations), 10000.0)
     v_pis = np.zeros((num_trials, num_iterations))
     intermediate_reward_matrix = np.zeros((reward_matrix.shape))
     approx_exp_policies = np.array([None] * num_trials)
     approx_exp_weights = np.array([None] * num_trials)
-    
+
 
     for trial_i in tqdm(range(num_trials)):
         if verbose:
@@ -52,9 +91,11 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
         # step 1: initialize pi_tilda and mu_pi_tilda
         pi_tilda = RandomPolicy(NUM_PURE_STATES, NUM_ACTIONS)
         mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(transition_matrix_train,
-                                                           sample_initial_state,
+                                                           initial_state_probs,
                                                            phi, pi_tilda)
-        opt = QuadOpt(epsilon=svm_epsilon, penalty=svm_penalty)
+        opt = QuadOpt(epsilon=svm_epsilon,
+                      penalty=svm_penalty,
+                      hyperplane_margin=hyperplane_margin)
         best_actions_old = None
         W_old = None
         pi_tildas = np.array([None]*num_iterations)
@@ -80,7 +121,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
             # step 5: estimate mu pi tilda
             mu_pi_tilda, v_pi_tilda = estimate_feature_expectation(
                                    transition_matrix_train,
-                                   sample_initial_state,
+                                   initial_state_probs,
                                    phi, pi_tilda)
             dist_mu = np.linalg.norm(mu_pi_tilda - mu_pi_expert, 2)
             if verbose:
@@ -122,18 +163,9 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
 
     # there will be a better way to do a policy selection
     approx_expert_weights = np.mean(approx_exp_weights, axis=0)
+    compute_reward = make_reward_computer(approx_expert_weights, phi)
+    intermediate_reward_matrix = np.asarray([compute_reward(s) for s in range(NUM_PURE_STATES)])
     approx_expert_Q = np.mean(approx_exp_policies, axis=0)
-
-    # test here
-    #pi_irl_greedy = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, approx_expert_Q)
-    #pi_irl_stochastic = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, approx_expert_Q)
-    #v_expert = evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi_expert)
-    #v_irl_greedy = evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi_irl_greedy)
-    #v_irl_stochastic = evaluate_policy_mc(transition_matrix, reward_matrix, sample_initial_state, pi_irl_stochastic)
-    #if verbose:
-    #    print('')
-    #    print('')
-    #    print('')
     feature_importances = sorted(zip(features, approx_expert_weights), key=lambda x: x[1], reverse=True)
     results = {'margins': margins,
                'dist_mus': dist_mus,
@@ -141,6 +173,7 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
                'v_pi_expert': v_pi_expert,
                'svm_penlaty': svm_penalty,
                'svm_epsilon': svm_epsilon,
+               'intermediate_rewards': intermediate_reward_matrix,
                'approx_expert_weights': approx_expert_weights,
                'feature_imp': feature_importances,
                'num_exp_trajectories': num_exp_trajectories,
@@ -148,29 +181,4 @@ def _max_margin_learner(transition_matrix_train, transition_matrix, reward_matri
               }
     return results
 
-
-def run_max_margin(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
-                    sample_initial_state,  phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                   num_iterations, num_trials, experiment_id, save_path, use_stochastic_policy, features, verbose):
-    '''
-    returns:
-        approximate expert policy
-    '''
-
-    res = _max_margin_learner(transition_matrix_train, transition_matrix, reward_matrix, pi_expert,
-                       sample_initial_state, phi, num_exp_trajectories, svm_penalty, svm_epsilon,
-                       num_iterations, num_trials, use_stochastic_policy, features, verbose)
-
-    print('final weights learned for ', experiment_id)
-    feature_importances = res['feature_imp']
-    top10_pos = feature_importances[:10]
-    top10_neg = feature_importances[-10:]
-    print('top 10 positive weights', top10_pos)
-    print('top 10 negative weights', top10_neg)
-    print('')
-    np.save('{}{}_t{}xi{}_result'.format(save_path, experiment_id, num_trials, num_iterations), res)
-    np.save('{}{}_t{}xi{}_weights'.format(save_path, experiment_id, num_trials, num_iterations),
-            res['approx_expert_weights'])
-
-    return res
 

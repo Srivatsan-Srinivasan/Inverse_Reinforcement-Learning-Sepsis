@@ -1,12 +1,14 @@
 from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder, apply_phi_to_centroids
+from utils.evaluation_utils import plot_KL, plot_avg_LL
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
 from policy.custom_policy import get_physician_policy
 from mdp.builder import make_mdp
 from mdp.solver import Q_value_iteration, iterate_policy
 from irl.max_margin import run_max_margin
 from irl.irl import  make_state_centroid_finder, make_phi, get_initial_state_distribution
-from utils.plot import plot_margin_expected_value, plot_diff_feature_expectation, plot_value_function
+from utils.plot import *
 from constants import *
+import evaluation.log_likelihood as lh
 
 import numpy as np
 import pandas as pd
@@ -30,6 +32,9 @@ class ExperimentManager():
         self.num_bins = args.num_bins
         self.verbose = args.verbose
         self.experiment_name = time.strftime('%y%m%d_%H%M%S', time.gmtime())
+        self.parallelized = args.parallelized
+        self.hyperplane_margin = args.hyperplane_margin
+        self.num_exp_trajectories = args.num_exp_trajectories
 
         if self.verbose:
             print('num trials', self.num_trials)
@@ -54,6 +59,13 @@ class ExperimentManager():
         self.phi = self.df_phi.as_matrix()
         assert np.all(np.isin(self.phi, [0, 1])), 'phi should be binary matrix'
 
+        # some utility stats
+        self.avg_mortality_per_state = pd.Series(np.zeros(NUM_PURE_STATES), name='avg_mortality')
+        g_mortality = self.df.groupby(['state'])['died_in_hosp'].value_counts().groupby(level=0)
+        am = g_mortality.apply(lambda x : 100* x / float(x.sum()) )[:, 1]
+        self.avg_mortality_per_state[am.index] = am
+        self.avg_mortality_per_state = self.avg_mortality_per_state.tolist()
+
         # build MDP
         # 1. bulld REWARD MATRIX
         self.features = self.df_phi.columns
@@ -72,21 +84,15 @@ class ExperimentManager():
         tm_train_path = TRAIN_TRANSITION_MATRIX_PCA_FILEPATH if self.use_pca else TRAIN_TRANSITION_MATRIX_FILEPATH
 
         trajectories = extract_trajectories(self.df, NUM_PURE_STATES, t_path)
-        trajectory_train_ids = trajectories[:, 0]
-        self.num_exp_trajectories = np.unique(trajectories[:, 0]).shape[0]
         transition_matrix, _ = \
                 make_mdp(trajectories, NUM_STATES, NUM_ACTIONS, tm_path, REWARD_MATRIX_FILEPATH)
-        print('number of expert trajectories for full data', self.num_exp_trajectories)
         assert np.isclose(np.sum(transition_matrix), NUM_STATES * NUM_ACTIONS), 'something wrong with \ test transition_matrix'
         self.transition_matrix = transition_matrix
 
         # 3. build transition_matrix using only training data
         trajectories_train = extract_trajectories(self.df_train, NUM_PURE_STATES, t_train_path)
-        trajectory_train_ids = trajectories_train[:, 0]
-        self.num_exp_trajectories_train = np.unique(trajectories_train[:, 0]).shape[0]
         transition_matrix_train, _ = \
                 make_mdp(trajectories_train, NUM_STATES, NUM_ACTIONS, tm_train_path, TRAIN_REWARD_MATRIX_FILEPATH)
-        print('number of expert trajectories for train data', self.num_exp_trajectories_train)
         assert np.isclose(np.sum(transition_matrix), NUM_STATES * NUM_ACTIONS), 'something wrong with \
              train transition_matrix'
         self.transition_matrix_train = transition_matrix_train
@@ -127,15 +133,94 @@ class ExperimentManager():
         self.experiments = []
 
 
-    def save_experiment(self, res, exp_id, save_file_name):
+    def save_experiment(self, res, exp):
         save_Q(res['approx_expert_Q'],
-              self.save_path,
-              self.num_trials,
-              self.num_iterations,
-              save_file_name)
-        plot_margin_expected_value(res['margins'], self.num_trials, self.num_iterations, self.img_path, exp_id)
-        plot_diff_feature_expectation(res['dist_mus'], self.num_trials, self.num_iterations, self.img_path, exp_id)
-        plot_value_function(res['v_pis'], res['v_pi_expert'], self.num_trials, self.num_iterations, self.img_path, exp_id)
+              exp.save_path,
+              exp.num_trials,
+              exp.num_iterations,
+              exp.save_file_name)
+
+        feature_importances = res['feature_imp']
+        top10_pos = feature_importances[:10]
+        top10_neg = feature_importances[-10:]
+        if self.verbose:
+            print('final weights learned for ', exp.experiment_id)
+            print('top 10 positive weights', top10_pos)
+            print('top 10 negative weights', top10_neg)
+            print('')
+        np.save('{}{}_t{}xi{}_result'.format(exp.save_path,
+                                             exp.experiment_id,
+                                             exp.num_trials,
+                                             exp.num_iterations), res)
+        np.save('{}{}_t{}xi{}_weights'.format(exp.save_path,
+                                              exp.experiment_id,
+                                              exp.num_trials,
+                                              exp.num_iterations),
+                                              res['approx_expert_weights'])
+
+        plot_margin_expected_value(res['margins'],
+                                   self.num_trials,
+                                   self.num_iterations,
+                                   self.img_path,
+                                   exp.experiment_id)
+
+        plot_diff_feature_expectation(res['dist_mus'],
+                                      self.num_trials,
+                                      self.num_iterations,
+                                      self.img_path,
+                                      exp.experiment_id)
+
+        plot_value_function(res['v_pis'],
+                            res['v_pi_expert'],
+                            self.num_trials,
+                            self.num_iterations,
+                            self.img_path,
+                            exp.experiment_id)
+
+        plot_intermediate_rewards_vs_mortality(res['intermediate_rewards'],
+                                               self.avg_mortality_per_state,
+                                                self.img_path,
+                                                exp.experiment_id,
+                                                exp.num_trials,
+                                                exp.num_iterations)
+
+        if exp.irl_use_stochastic_policy:
+            df = self.df_train[self.df_centroids.columns]
+            pi_irl_s = StochasticPolicy(NUM_PURE_STATES,
+                                        NUM_ACTIONS,
+                                        res['approx_expert_Q'])
+
+            plot_deviation_from_experts(self.pi_expert_phy_s,
+                                        pi_irl_s,
+                                        self.img_path,
+                                        exp.experiment_id,
+                                        exp.num_trials,
+                                        exp.num_iterations)
+
+            # kl and loglikelihood
+            LL = lh.get_log_likelihood(df,
+                                       pi_irl_s,
+                                       self.pi_expert_phy_g,
+                                       self.pi_expert_phy_s,
+                                       num_states = NUM_PURE_STATES,
+                                       num_actions = NUM_ACTIONS,
+                                       restrict_num = True,
+                                       avg = True)
+            KL = lh.get_KL_divergence(self.pi_expert_phy_s,
+                                      pi_irl_s)
+
+            plot_KL(KL,
+                   plot_suffix=exp.experiment_id,
+                   save_path=self.img_path,
+                   show=False,
+                   iter_num=exp.num_iterations,
+                   trial_num=exp.num_trials)
+            plot_avg_LL(LL,
+                       plot_suffix=exp.experiment_id,
+                       save_path=self.img_path,
+                       show=False,
+                       iter_num=exp.num_iterations,
+                       trial_num=exp.num_trials)
 
 
     def set_experiment(self, exp):
@@ -152,19 +237,57 @@ class ExperimentManager():
         exp.save_path = self.save_path
         exp.features = self.features
         exp.verbose = self.verbose
-
+        exp.hyperplane_margin = self.hyperplane_margin
+        if self.use_pca:
+            exp.experiment_id += '_pca'
+            exp.save_file_name += '_pca'
         self.experiments.append(exp)
 
     def _run(self, exp):
         res = exp.run()
-        self.save_experiment(res, exp.experiment_id, exp.save_file_name)
+        self.save_experiment(res, exp)
 
     def run(self):
         '''
         parallelize the experiments
         '''
-        pool = Pool(os.cpu_count() - 1)
-        pool.map(self._run, self.experiments)
+        if self.parallelized:
+            try:
+                pool = Pool(os.cpu_count() - 1)
+                pool.map(self._run, self.experiments)
+            finally:
+                pool.close()
+                pool.join()
+        else:
+            for e in self.experiments:
+                self._run(e)
+
+
+    def _run_perf_vs_trajectories(self, num_exp_trajectories):
+        #res = exp.run()
+        #v_pi_irl_g, v_pi_irl_s, num_exp_trajectories
+        pass
+
+    def run_perf_vs_trajectories(self, max_num_exp_trajectories=10000):
+        step_size = 50
+        num_exp_trajectories_list = np.arange(1, max_num_exp_trajectories+1, step_size)
+        v_pi_irl_gs = np.zeros(num_exp_trajectories_list.shape)
+        v_pi_irl_ss = np.zeros(num_exp_trajectories_list.shape)
+        if self.parallelized:
+            try:
+                pool = Pool(os.cpu_count() - 1)
+                v_pi_irl_g, v_pi_irl_s, num_exp_trajectories = \
+                        pool.map(self._run_perf_vs_trajectories, num_exp_trajectories_list)
+                v_pi_irl_gs[num_exp_trajectories // step_size] = v_pi_irl_g
+                v_pi_irl_ss[num_exp_trajectories // step_size] = v_pi_irl_s
+            finally:
+                pool.close()
+                pool.join()
+        else:
+            raise Exception('turn on parallelization')
+        res = {'v_pi_irl_gs': v_pi_irl_gs, 'v_pi_irl_ss': v_pi_irl_ss}
+        cur_t = time.strftime('%y%m%d_%H%M%S', time.gmtime())
+        np.save('{}perf_vs_traj_result_{}'.format(self.save_path, cur_t), res)
 
 class Experiment():
     def __init__(self, experiment_id,
@@ -188,10 +311,9 @@ class Experiment():
                              self.svm_epsilon,
                              self.num_iterations,
                              self.num_trials,
-                             self.experiment_id,
-                             self.save_path,
                              self.irl_use_stochastic_policy,
                              self.features,
+                             self.hyperplane_margin,
                              self.verbose)
 
         return res

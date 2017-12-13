@@ -123,7 +123,7 @@ def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test =
     plt.legend(loc='best', fontsize=FONT_SIZE)
     plt.xlabel('States', fontsize=FONT_SIZE)
     plt.ylabel('KL Divergerence', fontsize=FONT_SIZE)
-    fig.savefig('{}kl_{}_t{}xi{}'.format(save_path, plot_suffix, trial_num, iter_num), ppi=300, bbox_inches='tight')
+    fig.savefig('{}{}_kl_t{}xi{}'.format(save_path, plot_suffix, trial_num, iter_num), ppi=300, bbox_inches='tight')
     if show:
         plt.show()
     else:
@@ -145,18 +145,6 @@ def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, te
         NLL_no_int.append(-1 * LL[keys[p]]["no_int"])
 
     fig = plt.figure(figsize=(10, 10))
-#    plt.bar("IRL", np.mean(LL_IRL), color = 'b', label="IRL")
-#    plt.bar("Random", np.mean(LL_random), color = 'g', label = "Random")
-#    plt.bar("No intervention", np.mean(LL_no_int), color = 'r', label = "No Intervention")
-#    test_str = "train"
-#    if test:
-#        test_str = "test"
-#    plt.title("Average log-likelihood for different policies to predict physician action in " + test_str + " data")
-#    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-#    if show:
-#        plt.show()
-#    else:
-#        return plt
     data_NLL = pd.DataFrame(np.transpose(np.matrix([NLL_IRL,NLL_random,NLL_no_int])))
     data_NLL.columns = ["IRL", "Random", "No_Intervention"]
     sns.barplot(data=data_NLL, estimator=mean)
@@ -165,7 +153,7 @@ def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, te
     #plot.title("Plot showing average negative LL")
     if show:
         plt.show()
-    fig.savefig('{}ll_{}_t{}xi{}'.format(save_path, plot_suffix, trial_num, iter_num), ppi=300, bbox_inches='tight')
+    fig.savefig('{}{}_ll_t{}xi{}'.format(save_path, plot_suffix, trial_num, iter_num), ppi=300, bbox_inches='tight')
     plt.close()
 
 
