@@ -101,8 +101,8 @@ def load_data(generate_new_data=False):
                 clustering(X_pca_train, X_pca_val, k=num_states, batch_size=300)
         # stitching up
         print('saving processed pca data')
-        to_concat_train = [X_pca_clustered_train, mu_train['action'], X_meta_train, X_pca_train, y_train['died_in_hosp']]
-        to_concat_val = [X_pca_clustered_val, mu_val['action'], X_meta_val, X_pca_val, y_val['died_in_hosp']]
+        to_concat_train = [X_pca_clustered_train, mu_train['action'], X_meta_train, X_pca_train, y_train]
+        to_concat_val = [X_pca_clustered_val, mu_val['action'], X_meta_val, X_pca_val, y_val]
         df_cleansed_pca_train = pd.concat(to_concat_train, axis=1)
         df_cleansed_pca_val = pd.concat(to_concat_val, axis=1)
         df_centroids_pca_train.to_csv(TRAIN_CENTROIDS_PCA_DATA_FILEPATH, index=False)

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import pprint as pp
+from multiprocessing import Pool
 
 import evaluation.log_likelihood as lh
 from utils import evaluation_utils as eu

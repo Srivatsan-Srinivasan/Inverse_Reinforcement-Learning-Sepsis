@@ -19,7 +19,7 @@ sns.set(font_scale=2)
 
 #p,q are distributions - p is base distribution and q is approximate
 def KL_divergence(p,q):
-    return entropy(p,q) 
+    return entropy(p,q)
 
 def cross_entropy(p,q):
     return entropy(p,q) + entropy(p) #KL-divergence + entropy
@@ -39,7 +39,7 @@ def gen_random_probability(num_actions = 25, epsilon = 0.001, random_action_rang
             return epsilon
     out = [assign(x,random_action_range) for x in range(num_actions)]
     out = np.array(out)/np.round(sum(out),3)
-  
+
     assert(abs(sum(out)- 1) < 0.01 and len(out) == num_actions)
     return np.array(out)
 
@@ -54,21 +54,21 @@ def log_likelihood(prob_actions, target_actions,avg = False ):
     #SANITY checks.
     assert(len(prob_actions) == len(target_actions))
     #assert(len(prob_actions[0]) == 25)
-    
+
     for i in range(len(target_actions)):
         target_act = target_actions[i]
         candidate_act_prob = prob_actions[i]
         #pdb.set_trace()
         out += math.log(candidate_act_prob[int(target_act)])
-    if avg : 
-        return out / len(target_actions) 
-    
+    if avg :
+        return out / len(target_actions)
+
     return out
 
 def log_likelihood_no_act(target_acts_stoch, no_int_id,avg = False):
     if avg:
         return(np.mean([math.log(i[no_int_id] + 1e-3) for i in target_acts_stoch ]))
-        
+
     return(sum([math.log(i[no_int_id] + 1e-3) for i in target_acts_stoch ]))
 
 def test_code():
@@ -77,22 +77,22 @@ def test_code():
     c = [0.11, 0.21, 0.29, 0.39]
     d = [0.4,0.3,0.2,0.1]
     e = [0.25,0.25,0.25,0.25]
-    
+
     print("KL(",a,",",b,") : ",KL_divergence(a,b))
     print("KL(",a,",",c,") : ",KL_divergence(a,c))
     print("KL(",a,",",d,") : ",KL_divergence(a,d))
     print("KL(",a,",",e,") : ",KL_divergence(a,e))
-    
+
     print("CE(",a,",",b,") : ",cross_entropy(a,b))
     print("CE(",a,",",c,") : ",cross_entropy(a,c))
     print("CE(",a,",",d,") : ",cross_entropy(a,d))
     print("CE(",a,",",e,") : ",cross_entropy(a,e))
-    
+
     assert(np.array_equal(gen_random_probability(), np.array([0.04 for i in range(25)])))
-    assert(np.allclose(gen_random_probability(random_action_range= range(5)), 
+    assert(np.allclose(gen_random_probability(random_action_range= range(5)),
                           np.concatenate([np.array([0.2 for i in range(5)]),np.zeros(20)*0.001]),
                        atol = 0.01  ))
- 
+
 def sumzip(*items):
     return [sum(values) for values in zip(*items)]
 
@@ -134,7 +134,7 @@ def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test =
 def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, test = True):
     keys = list(LL.keys())
     key_len = len(keys)
-    
+
     NLL_IRL = []
     NLL_random = []
     NLL_no_int = []
@@ -143,7 +143,7 @@ def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, te
         NLL_IRL.append(-1 * LL[keys[p]]["IRL"])
         NLL_random.append(-1 * LL[keys[p]]["random"])
         NLL_no_int.append(-1 * LL[keys[p]]["no_int"])
-    
+
     fig = plt.figure(figsize=(10, 10))
 #    plt.bar("IRL", np.mean(LL_IRL), color = 'b', label="IRL")
 #    plt.bar("Random", np.mean(LL_random), color = 'g', label = "Random")
