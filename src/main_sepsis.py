@@ -91,13 +91,13 @@ if __name__ == '__main__':
     )
     em.set_experiment(exp7)
 
-    exp8 = Experiment(
-        experiment_id = 'irl_stochastic_mdp_stochatic',
-        policy_expert = em.pi_expert_mdp_s,
-        save_file_name = cur_t + '_' + IRL_STOCHASTIC_MDP_Q_STOCHASTIC,
-        irl_use_stochastic_policy=True
-    )
-    em.set_experiment(exp8)
+    #exp8 = Experiment(
+    #    experiment_id = 'irl_stochastic_mdp_stochatic',
+    #    policy_expert = em.pi_expert_mdp_s,
+    #    save_file_name = cur_t + '_' + IRL_STOCHASTIC_MDP_Q_STOCHASTIC,
+    #    irl_use_stochastic_policy=True
+    #)
+    #em.set_experiment(exp8)
 
     em.run()
 

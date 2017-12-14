@@ -18,19 +18,6 @@ def plot_hyperplane(X, xx, yy):
     plot hyperplane and vectors (mus)
     '''
     pass
-    #fig, ax = plt.subplots()
-    #fig, (ax1, ax2) = plt.subplots(1, 2)
-    #x1 = np.linspace(X[:,0].min(), X[:,0].max(), 100)
-    #x2 = -weights[0]/weights[1]*x1 - bias/weights[1]
-    #c = range(len(y) - 1)
-    #cm = plt.cm.get_cmap('Purples')
-    #ax1.scatter(x=X[:-1, 0], y=X[:-1, 1], c=c, cmap=cm)
-    #ax1.scatter(x=X[-1, 0], y=X[-1, 1], marker='*')
-    #ax1.plot(x1, x2, label='hyperplane')
-    #exp_decay = lambda x, A, t, y0: A * np.exp(x * t) + y0
-    #xx = range(self.counter)
-    #ax2.plot(xx, yy, label='smooth')
-
 
 def plot_margin_expected_value(margins, num_trials, num_iterations, save_path, plot_prefix='new'):
     '''
@@ -53,7 +40,6 @@ def plot_margin_expected_value(margins, num_trials, num_iterations, save_path, p
     plt.savefig('{}{}_margin_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
-
 def plot_diff_feature_expectation(dist_mus, num_trials, num_iterations, save_path, plot_prefix='new'):
     '''
     plot l2 distance between mu_expert and mu_pi_tilda
@@ -72,7 +58,6 @@ def plot_diff_feature_expectation(dist_mus, num_trials, num_iterations, save_pat
     plt.legend()
     plt.savefig('{}{}_dist_mu_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
-
 
 def plot_value_function(v_pis, v_pi_expert, num_trials, num_iterations, save_path, plot_prefix='new'):
     # performance relative to expert
@@ -120,36 +105,105 @@ def plot_performance_vs_trajectories(save_path,
     fig.savefig('{}{}_performance_vs_traj_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
-
-def plot_deviation_from_experts(pi_expert_s,
-                                pi_irl_s,
+def plot_deviation_from_experts(sd,
+                                pi_phy,
+                                pi_mdp_probs,
+                                pi_irl_probs,
                                 save_path,
                                 plot_prefix,
                                 num_trials,
                                 num_iterations):
+    '''
+    compare clinician, mdp
+    compare clinician, irl
+    '''
     # hyperparameters
-    thresholds = np.arange(0.01, 0.21, 0.03)
-    pi_expert_probs = pi_expert_s.query_Q_probs()
-    pi_irl_probs = pi_irl_s.query_Q_probs()
-    violations = np.zeros((len(thresholds), NUM_PURE_STATES))
-    for i, th in enumerate(thresholds):
-        for s in range(NUM_PURE_STATES):
-            low_p_action_indices = np.flatnonzero(pi_expert_probs[s,:] <= th)
-            num_violations = np.sum(pi_irl_probs[s, low_p_action_indices] > th)
-            violations[i, s] = 0 if len(low_p_action_indices) == 0 else num_violations / len(low_p_action_indices)
-        violations[i] = 100 * np.array(sorted(violations[i], reverse=True))
+    # some preprocessing, cap bin jump by one bin only
+    # e.g. for iv, std is too high, it often jumps by two bins
+    thresholds = np.array([0.20, 0.30, 0.50])
+    pi_phy_probs = pi_phy.query_Q_probs()
+    violations = np.zeros((2, len(thresholds), NUM_PURE_STATES))
+    num_bins = 5
+    bins = np.arange(num_bins)
+    for i, pi in enumerate([pi_mdp_probs, pi_irl_probs]):
+        for j, th in enumerate(thresholds):
+            for s in range(NUM_PURE_STATES):
+                mode_action = np.argmax(pi_phy_probs[s, :])
+                # @hack @todo fix this better
+                mask = np.ones(num_bins, dtype=bool)
+                aa = sd[sd[:, 1] == mode_action]
+                #for k, _ in enumerate(aa):
+                #    mask[np.unique(aa[k])] = 0
+                # @hack
+                mask[np.unique(aa[0])] = 0
+                no_sigma_action_idx = bins[mask]
+                # not included in -sigma, +sigma of mode
+                num_violations = np.sum(pi[s, no_sigma_action_idx] > th)
+                violations[i, j, s] = 0 if len(no_sigma_action_idx) == 0 else num_violations / len(no_sigma_action_idx)
+            violations[i, j] = 100 * np.array(sorted(violations[i, j], reverse=True))
 
     fig= plt.figure(figsize=(10,10))
-    for i, th in enumerate(thresholds):
-        plt.plot(violations[i, :], label='threshold: {:.2f}%'.format(100.0 * th))
+    linestyles = ['-',':']
+    desc = ['mdp','irl']
+    # @refactor
+    colors = [['firebrick', 'red', 'darksalmon'], ['blue', 'royalblue', 'navy']]
+    for i, _ in enumerate([pi_mdp_probs, pi_irl_probs]):
+        for j, th in enumerate(thresholds):
+            plt.plot(violations[i, j, :], linestyle=linestyles[i], c=colors[i][j], label='{}, threshold={:.2f}%'.format(desc[i], 100.0 * th))
     quartiles = np.arange(5)/4.0
-    plt.xticks(np.around(750 * quartiles), quartiles)
+    plt.xticks(np.around(750 * quartiles), 100 * quartiles)
     plt.legend(loc='best')
-    plt.xlabel('States', size=FONT_SIZE)
+    plt.xlabel('State Quantiles (%)', size=FONT_SIZE)
     plt.ylabel('Proportion of Violations (%)', size=FONT_SIZE)
     fig.savefig('{}{}_violations_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
+#def plot_deviation_from_experts(pi_phy,
+#                                pi_phy_sd_l,
+#                                pi_phy_sd_r,
+#                                pi_mdp_probs,
+#                                pi_irl_probs,
+#                                save_path,
+#                                plot_prefix,
+#                                num_trials,
+#                                num_iterations):
+#    '''
+#    compare clinician, mdp
+#    compare clinician, irl
+#    '''
+#    # hyperparameters
+#    # some preprocessing, cap bin jump by one bin only
+#    # e.g. for iv, std is too high, it often jumps by two bins
+#
+#    thresholds = np.arange(0.05, 0.16, 0.05)
+#    pi_phy_probs = pi_phy.query_Q_probs()
+#    pi_phy_sd_l_probs = pi_phy_sd_l.query_Q_probs()
+#    pi_phy_sd_r_probs = pi_phy_sd_r.query_Q_probs()
+#    concat = np.array((pi_phy_probs, pi_phy_sd_r_probs, pi_phy_sd_r_probs))
+#    pi_phy_probs_avg = np.mean(concat, axis=0)
+#
+#    violations = np.zeros((2, len(thresholds), NUM_PURE_STATES))
+#    import pdb;pdb.set_trace()
+#    for i, pi in enumerate([pi_mdp_probs, pi_irl_probs]):
+#        for j, th in enumerate(thresholds):
+#            for s in range(NUM_PURE_STATES):
+#                low_p_action_idx = np.flatnonzero(pi_phy_probs_avg[s,:] <= th)
+#                num_violations = np.sum(pi_irl_probs[s, low_p_action_indices] > th)
+#                violations[i, j, s] = 0 if len(low_p_action_indices) == 0 else num_violations / len(low_p_action_indices)
+#                violations[i, j, s] = 0 if len(low_p_action_indices) == 0 else num_violations / len(low_p_action_indices)
+#            violations[i, j] = 100 * np.array(sorted(violations[i, j], reverse=True))
+#            violations[i, j] = 100 * np.array(sorted(violations[i, j], reverse=True))
+#
+#    fig= plt.figure(figsize=(10,10))
+#    for i, th in enumerate(thresholds):
+#        plt.plot(violations[i, :], label='threshold: {:.2f}%'.format(100.0 * th))
+#    quartiles = np.arange(5)/4.0
+#    plt.xticks(np.around(750 * quartiles), quartiles)
+#    plt.legend(loc='best')
+#    plt.xlabel('States', size=FONT_SIZE)
+#    plt.ylabel('Proportion of Violations (%)', size=FONT_SIZE)
+#    fig.savefig('{}{}_violations_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
+#    plt.close()
 
 def plot_intermediate_rewards_vs_mortality(intermediate_rewards,
                                            avg_mortality_per_state,
@@ -158,7 +212,11 @@ def plot_intermediate_rewards_vs_mortality(intermediate_rewards,
                                            num_trials,
                                            num_iterations):
     fig = plt.figure(figsize=(10,10))
-    sc = plt.scatter(np.arange(len(intermediate_rewards)), sorted(intermediate_rewards, reverse=True), c=avg_mortality_per_state, cmap='Reds', label='hello world')
+    # select only high mortality states
+    avg_mortality_per_state = np.array(avg_mortality_per_state)
+    intermediate_rewards = intermediate_rewards[np.flatnonzero(avg_mortality_per_state > 70)]
+    high_mortality_states = avg_mortality_per_state[np.flatnonzero(avg_mortality_per_state > 70)]
+    sc = plt.scatter(np.arange(len(intermediate_rewards)), sorted(intermediate_rewards, reverse=True), c=high_mortality_states, cmap='Reds', label='hello world')
     plt.axhline(1, c='b', lw=3, linestyle='--')
     plt.axhline(-1, c='b', lw=3, linestyle='--')
     plt.legend(loc='best')
@@ -167,10 +225,5 @@ def plot_intermediate_rewards_vs_mortality(intermediate_rewards,
     plt.colorbar(sc)
     fig.savefig('{}{}_intermediate_rewards_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
-
-
-
-
-
 
 

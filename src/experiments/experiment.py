@@ -76,7 +76,6 @@ class ExperimentManager():
         assert(np.isclose(np.sum(reward_matrix), 0))
         self.reward_matrix = reward_matrix
 
-
         # 2. build transition_matrix using full data
         t_path = TRAJECTORIES_PCA_FILEPATH if self.use_pca else TRAJECTORIES_FILEPATH
         tm_path = TRANSITION_MATRIX_PCA_FILEPATH if self.use_pca else TRANSITION_MATRIX_FILEPATH
@@ -120,17 +119,41 @@ class ExperimentManager():
         # derive expert policies from the full data
         # empirically there's little difference from when derived
         # only from training data
-        Q_star = Q_value_iteration(transition_matrix, reward_matrix)
         self.pi_expert_phy_g = get_physician_policy(trajectories, is_stochastic=False)
         self.pi_expert_phy_s = get_physician_policy(trajectories, is_stochastic=True)
         save_Q(self.pi_expert_phy_g.Q, self.save_path, self.num_trials, self.num_iterations, PHYSICIAN_Q)
 
+        Q_star = Q_value_iteration(self.transition_matrix, self.reward_matrix)
         self.pi_expert_mdp_g = GreedyPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
         self.pi_expert_mdp_s = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
         save_Q(self.pi_expert_mdp_g.Q, self.save_path, self.num_trials, self.num_iterations, MDP_OPTIMAL_Q)
 
+
         # experiments
         self.experiments = []
+        self.pi_phy_vaso = None
+        self.pi_phy_vaso_sd_l = None
+        self.pi_phy_vaso_sd_r = None
+        self.pi_phy_iv = None
+        self.pi_phy_iv_sd_l = None
+        self.pi_phy_iv_sd_r = None
+        self.pi_mdp_vaso_probs = None
+        self.pi_mdp_iv_probs = None
+        self.pi_irl_vaso_probs = None
+        self.pi_irl_iv_probs = None
+
+
+        # self:
+        df = self.df
+        iv_min = df['action_iv'].min()
+        iv_max = df['action_iv'].max()
+        vaso_min = df['action_vaso'].min()
+        vaso_max = df['action_vaso'].max()
+        df.loc[df['action_iv_sd_left'] != df['action_iv'], 'action_iv_sd_left'] = (df['action_iv'].copy() - 1).clip(iv_min, iv_max)
+        df.loc[df['action_iv_sd_right'] != df['action_iv'], 'action_iv_sd_right'] = (df['action_iv'].copy() + 1).clip(iv_min, iv_max)
+        df.loc[df['action_vaso_sd_left'] != df['action_vaso'], 'action_vaso_sd_left'] = (df['action_vaso'].copy() - 1).clip(vaso_min, vaso_max)
+        df.loc[df['action_vaso_sd_right'] != df['action_vaso'], 'action_vaso_sd_right'] = (df['action_vaso'].copy() + 1).clip(vaso_min, vaso_max)
+        self.df = df
 
 
     def save_experiment(self, res, exp):
@@ -164,11 +187,12 @@ class ExperimentManager():
                                    self.img_path,
                                    exp.experiment_id)
 
-        plot_diff_feature_expectation(res['dist_mus'],
-                                      self.num_trials,
-                                      self.num_iterations,
-                                      self.img_path,
-                                      exp.experiment_id)
+        # @refactor this is not needed
+        #plot_diff_feature_expectation(res['dist_mus'],
+        #                              self.num_trials,
+        #                              self.num_iterations,
+        #                              self.img_path,
+        #                              exp.experiment_id)
 
         plot_value_function(res['v_pis'],
                             res['v_pi_expert'],
@@ -179,10 +203,10 @@ class ExperimentManager():
 
         plot_intermediate_rewards_vs_mortality(res['intermediate_rewards'],
                                                self.avg_mortality_per_state,
-                                                self.img_path,
-                                                exp.experiment_id,
-                                                exp.num_trials,
-                                                exp.num_iterations)
+                                               self.img_path,
+                                               exp.experiment_id,
+                                               exp.num_trials,
+                                               exp.num_iterations)
 
         if exp.irl_use_stochastic_policy:
             df = self.df_train[self.df_centroids.columns]
@@ -190,13 +214,37 @@ class ExperimentManager():
                                         NUM_ACTIONS,
                                         res['approx_expert_Q'])
 
-            plot_deviation_from_experts(self.pi_expert_phy_s,
-                                        pi_irl_s,
+            if self.pi_phy_vaso is None or \
+                self.pi_phy_iv is None or \
+                self.pi_mdp_vaso_probs is None or \
+                self.pi_mdp_iv_probs is None or \
+                self.pi_irl_vaso_probs is None or \
+                self.pi_irl_iv_probs is None:
+                # do this only one time
+                self._prepare_deviation_plots(self.df,
+                                              self.pi_expert_mdp_s,
+                                              pi_irl_s)
+
+
+            sd_vaso = self.df[['action_vaso_sd_left', 'action_vaso', 'action_vaso_sd_right']].drop_duplicates().as_matrix()
+            plot_deviation_from_experts(sd_vaso,
+                                        self.pi_phy_vaso,
+                                        self.pi_mdp_vaso_probs,
+                                        self.pi_irl_vaso_probs,
                                         self.img_path,
-                                        exp.experiment_id,
+                                        exp.experiment_id + '_vaso',
                                         exp.num_trials,
                                         exp.num_iterations)
 
+            sd_iv = self.df[['action_iv_sd_left', 'action_iv', 'action_iv_sd_right']].drop_duplicates().as_matrix()
+            plot_deviation_from_experts(sd_iv,
+                                        self.pi_phy_iv,
+                                        self.pi_mdp_iv_probs,
+                                        self.pi_irl_iv_probs,
+                                        self.img_path,
+                                        exp.experiment_id + '_iv',
+                                        exp.num_trials,
+                                        exp.num_iterations)
             # kl and loglikelihood
             LL = lh.get_log_likelihood(df,
                                        pi_irl_s,
@@ -206,21 +254,70 @@ class ExperimentManager():
                                        num_actions = NUM_ACTIONS,
                                        restrict_num = True,
                                        avg = True)
+
             KL = lh.get_KL_divergence(self.pi_expert_phy_s,
                                       pi_irl_s)
-
             plot_KL(KL,
                    plot_suffix=exp.experiment_id,
                    save_path=self.img_path,
                    show=False,
                    iter_num=exp.num_iterations,
                    trial_num=exp.num_trials)
+
             plot_avg_LL(LL,
                        plot_suffix=exp.experiment_id,
                        save_path=self.img_path,
                        show=False,
                        iter_num=exp.num_iterations,
                        trial_num=exp.num_trials)
+
+    def _prepare_deviation_plots(self, df, pi_mdp, pi_irl):
+        path_vaso = TRAJECTORIES_PCA_VASO_FILEPATH if self.use_pca else TRAJECTORIES_VASO_FILEPATH
+        #path_vaso_sd_l = TRAJECTORIES_PCA_VASO_SD_LEFT_FILEPATH if self.use_pca else TRAJECTORIES_VASO_SD_LEFT_FILEPATH
+        #path_vaso_sd_r = TRAJECTORIES_PCA_VASO_SD_RIGHT_FILEPATH if self.use_pca else TRAJECTORIES_VASO_SD_RIGHT_FILEPATH
+        path_iv = TRAJECTORIES_PCA_IV_FILEPATH if self.use_pca else TRAJECTORIES_IV_FILEPATH
+        #path_iv_sd_l = TRAJECTORIES_PCA_IV_SD_LEFT_FILEPATH if self.use_pca else TRAJECTORIES_IV_SD_LEFT_FILEPATH
+        #path_iv_sd_r = TRAJECTORIES_PCA_IV_SD_RIGHT_FILEPATH if self.use_pca else TRAJECTORIES_IV_SD_RIGHT_FILEPATH
+
+        traj_vaso = extract_trajectories(self.df, NUM_PURE_STATES, path_vaso, 'action_vaso')
+        #traj_vaso_sd_l = extract_trajectories(self.df, NUM_PURE_STATES, path_vaso_sd_l, 'action_vaso_sd_left')
+        #traj_vaso_sd_r = extract_trajectories(self.df, NUM_PURE_STATES, path_vaso_sd_r, 'action_vaso_sd_right')
+        traj_iv = extract_trajectories(self.df, NUM_PURE_STATES, path_iv, 'action_iv')
+        #traj_iv_sd_l = extract_trajectories(self.df, NUM_PURE_STATES, path_iv_sd_l, 'action_iv_sd_left')
+        #traj_iv_sd_r = extract_trajectories(self.df, NUM_PURE_STATES, path_iv_sd_r, 'action_iv_sd_right')
+        num_bins = 5
+        self.pi_phy_vaso = get_physician_policy(traj_vaso, num_actions=num_bins, is_stochastic=True)
+        #self.pi_phy_vaso_sd_l = get_physician_policy(traj_vaso_sd_l, num_actions=num_bins, is_stochastic=True)
+        #self.pi_phy_vaso_sd_r = get_physician_policy(traj_vaso_sd_r, num_actions=num_bins, is_stochastic=True)
+        self.pi_phy_iv = get_physician_policy(traj_iv, num_actions=num_bins, is_stochastic=True)
+        #self.pi_phy_iv_sd_l = get_physician_policy(traj_iv_sd_l, num_actions=num_bins, is_stochastic=True)
+        #self.pi_phy_iv_sd_r = get_physician_policy(traj_iv_sd_r, num_actions=num_bins, is_stochastic=True)
+
+        num_bins = 5
+        mdp_probs = pi_mdp.query_Q_probs()
+        mdp_vaso_probs = np.zeros((NUM_PURE_STATES, num_bins))
+        mdp_iv_probs = np.zeros((NUM_PURE_STATES, num_bins))
+        irl_probs = pi_irl.query_Q_probs()
+        irl_vaso_probs = np.zeros((NUM_PURE_STATES, num_bins))
+        irl_iv_probs = np.zeros((NUM_PURE_STATES, num_bins))
+        vaso_bins = np.arange(25) // num_bins
+        iv_bins = np.arange(25) % num_bins
+
+        for bin_i in range(num_bins):
+            # marginalize out iv and vaso
+            mdp_vaso_probs[:, bin_i] = np.sum(mdp_probs[:, np.flatnonzero(vaso_bins == bin_i)], axis=1)
+            mdp_iv_probs[:, bin_i] = np.sum(mdp_probs[:, np.flatnonzero(iv_bins == bin_i)], axis=1)
+            irl_vaso_probs[:, bin_i] = np.sum(irl_probs[:, np.flatnonzero(vaso_bins == bin_i)], axis=1)
+            irl_iv_probs[:, bin_i] = np.sum(irl_probs[:, np.flatnonzero(iv_bins == bin_i)], axis=1)
+
+        assert np.isclose(np.sum(mdp_vaso_probs), NUM_PURE_STATES)
+        assert np.isclose(np.sum(mdp_iv_probs), NUM_PURE_STATES)
+        assert np.isclose(np.sum(irl_vaso_probs), NUM_PURE_STATES)
+        assert np.isclose(np.sum(irl_iv_probs), NUM_PURE_STATES)
+        self.pi_mdp_vaso_probs = mdp_vaso_probs
+        self.pi_mdp_iv_probs = mdp_iv_probs
+        self.pi_irl_vaso_probs = irl_vaso_probs
+        self.pi_irl_iv_probs = irl_iv_probs
 
 
     def set_experiment(self, exp):
@@ -264,11 +361,16 @@ class ExperimentManager():
 
 
     def _run_perf_vs_trajectories(self, num_exp_trajectories):
+
+        pi_irl_s = StochasticPolicy(NUM_PURE_STATES,
+                                    NUM_ACTIONS,
+                                    res['approx_expert_Q'])
         #res = exp.run()
+
         #v_pi_irl_g, v_pi_irl_s, num_exp_trajectories
         pass
 
-    def run_perf_vs_trajectories(self, max_num_exp_trajectories=10000):
+    def run_perf_vs_trajectories(self, max_num_exp_trajectories=3000):
         step_size = 50
         num_exp_trajectories_list = np.arange(1, max_num_exp_trajectories+1, step_size)
         v_pi_irl_gs = np.zeros(num_exp_trajectories_list.shape)

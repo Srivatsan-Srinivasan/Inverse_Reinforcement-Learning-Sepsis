@@ -110,6 +110,9 @@ def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test =
         KL_vaso_random.append(KL[state]["vaso_only_random"])
         KL_iv_random.append(KL[state]["iv_only_random"])
     fig = plt.figure(figsize=(10, 10))
+    #data_NLL = pd.DataFrame(np.transpose(np.matrix([KL_IRL,NLL_random,NLL_no_int])))
+    #data_NLL.columns = ["IRL", "Random", "No_Intervention", "Vaso Only Random", "IV Only Random"]
+    #sns.barplot(data=data_NLL, estimator=mean)
     plt.bar(keys,KL_IRL,color = 'b',label="IRL")
     plt.bar(keys,KL_random,bottom = sumzip(KL_IRL), color = 'r', label = "Random")
     plt.bar(keys,KL_no_int,bottom = sumzip(KL_IRL,KL_random), color = 'y', label = "No intervnetion")

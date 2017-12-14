@@ -77,6 +77,9 @@ def load_data(generate_new_data=False):
         X_to_cluster_val = X_val.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
         df_centroids_train, X_clustered_train, X_clustered_val = \
             clustering(X_to_cluster_train, X_to_cluster_val, k=num_states, batch_size=300)
+
+        # add one standard deviation stuff
+
         # stitching up
         print('saving processed data')
         df_cleansed_train = pd.concat([X_clustered_train, X_train, mu_train, y_train], axis=1)
@@ -92,17 +95,24 @@ def load_data(generate_new_data=False):
         X_meta_val = X_pca_val[COLS_NOT_FOR_CLUSTERING].copy().astype(int)
 
         X_pca_train = X_pca_train.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        #X_pca_train.to_csv('pca_train_df', index=False)
         X_pca_val = X_pca_val.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        #X_pca_val.to_csv('pca_val_df', index=False)
         X_pca_train , X_pca_val  = apply_pca([X_pca_train, X_pca_val])
 
         # k-means clustering to consturct discrete states
         print('clustering for pca features')
         df_centroids_pca_train, X_pca_clustered_train, X_pca_clustered_val = \
                 clustering(X_pca_train, X_pca_val, k=num_states, batch_size=300)
+
+
+        # add one standard deviation stuff
+
+
         # stitching up
         print('saving processed pca data')
-        to_concat_train = [X_pca_clustered_train, mu_train['action'], X_meta_train, X_pca_train, y_train]
-        to_concat_val = [X_pca_clustered_val, mu_val['action'], X_meta_val, X_pca_val, y_val]
+        to_concat_train = [X_pca_clustered_train, mu_train, X_meta_train, X_pca_train, y_train]
+        to_concat_val = [X_pca_clustered_val, mu_val, X_meta_val, X_pca_val, y_val]
         df_cleansed_pca_train = pd.concat(to_concat_train, axis=1)
         df_cleansed_pca_val = pd.concat(to_concat_val, axis=1)
         df_centroids_pca_train.to_csv(TRAIN_CENTROIDS_PCA_DATA_FILEPATH, index=False)
@@ -155,17 +165,17 @@ def initialize_save_data_folder():
             raise Exception('could not initialize save data folder')
     return save_path
 
-def extract_trajectories(df, num_states, trajectory_filepath):
+def extract_trajectories(df, num_states, trajectory_filepath, action_column='action'):
     if os.path.isfile(trajectory_filepath):
         trajectories = np.load(trajectory_filepath)
     else:
         print('extract trajectories')
-        trajectories = _extract_trajectories(df, num_states)
+        trajectories = _extract_trajectories(df, num_states, action_column)
         np.save(trajectory_filepath, trajectories)
     trajectories = trajectories.astype(np.int)
     return trajectories
 
-def _extract_trajectories(df, num_states):
+def _extract_trajectories(df, num_states, action_column):
     '''
     a few strong assumptions are made here.
     1. we consider those who died in 90 days but not in hopsital to have the same status as alive. hence we give reward of one. Worry not. we can change back. this assumption was to be made to account for uncertainty in the cause of dealth after leaving the hospital
@@ -176,7 +186,7 @@ def _extract_trajectories(df, num_states):
     trajectories = pd.DataFrame(np.zeros((df.shape[0], len(cols))), columns=cols)
     trajectories.loc[:, 'icustayid'] = df['icustayid']
     trajectories.loc[:, 's'] = df['state']
-    trajectories.loc[:, 'a'] = df['action']
+    trajectories.loc[:, 'a'] = df[action_column]
 
     # reward function
     DEFAULT_REWARD = 0
@@ -255,7 +265,7 @@ def correct_data(df_train, df_val):
 
 
 def separate_X_mu_y(df_train, df_val, cols=None):
-    # TODO: fix the error here: ugly fix later
+    num_bins = 5
     mu_train = df_train[INTERVENTIONS]
     iv_train = mu_train['input_4hourly_tev']
     vaso_train = mu_train['median_dose_vaso']
@@ -264,14 +274,43 @@ def separate_X_mu_y(df_train, df_val, cols=None):
     vaso_val = mu_val['median_dose_vaso']
 
     iv_bin_edges, vaso_bin_edges = get_action_discretization_rules(iv_train, vaso_train)
-    actions_train  = discretize_actions(iv_train, vaso_train, iv_bin_edges, vaso_bin_edges)
-    actions_val = discretize_actions(iv_val, vaso_val, iv_bin_edges, vaso_bin_edges)
-    mu_train['action'] = actions_train
-    mu_val['action'] = actions_val
+    bins_vaso_train = discretize_actions(vaso_train, vaso_bin_edges)
+    bins_iv_train = discretize_actions(iv_train, iv_bin_edges)
+    bins_vaso_val = discretize_actions(vaso_val, vaso_bin_edges)
+    bins_iv_val = discretize_actions(iv_val, iv_bin_edges)
+
+    # bin a data point one s.d. away to the left from the observed  data point
+    # additional analysis to account for binning error
+    sd_vaso = vaso_train.std()
+    sd_iv = iv_train.std()
+
+    mu_train['action'] = bins_vaso_train * num_bins + bins_iv_train
+    mu_train['action_vaso'] = bins_vaso_train
+    mu_train['action_vaso_sd_left'] = bins_vaso_sd_left_train
+    mu_train['action_vaso_sd_right'] = bins_vaso_sd_right_train
+    mu_train['action_iv'] = bins_iv_train
+    mu_train['action_iv_sd_left'] = bins_vaso_sd_left_train
+    mu_train['action_iv_sd_right'] = bins_vaso_sd_right_train
+
+    mu_val['action'] = bins_vaso_val * num_bins + bins_iv_val
+    mu_val['action_vaso'] = bins_vaso_val
+    mu_val['action_vaso_sd_left'] = bins_vaso_sd_left_val
+    mu_val['action_vaso_sd_right'] = bins_vaso_sd_right_val
+    mu_val['action_iv'] = bins_iv_val
+    mu_val['action_iv_sd_left'] = bins_iv_sd_left_val
+    mu_val['action_iv_sd_right'] = bins_iv_sd_right_val
 
     y_train = df_train[OUTCOMES].astype(int)
     y_val = df_val[OUTCOMES].astype(int)
 
+    bins_vaso_sd_left_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_vaso, left=True)
+    bins_vaso_sd_right_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_vaso, left=False)
+    bins_iv_sd_left_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_iv, left=True)
+    bins_iv_sd_right_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_iv, left=False)
+    bins_vaso_sd_left_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_vaso, left=True)
+    bins_vaso_sd_right_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_vaso, left=False)
+    bins_iv_sd_left_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_iv, left=True)
+    bins_iv_sd_right_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_iv, left=False)
     if cols is None:
         default_cols = set(ALL_VALUES) - set(OUTCOMES)
         X_train = df_train[list(default_cols)]
@@ -281,6 +320,18 @@ def separate_X_mu_y(df_train, df_val, cols=None):
         X_train = df_train[list(observation_cols)]
         X_val = df_val[list(observation_cols)]
     return X_train, mu_train, y_train, X_val, mu_val, y_val
+
+def get_sd_away_bins(df, bin_edges, sd, left=True):
+    '''
+    get bins of one standard deviation away from the action
+    for each action (iv and vaso)
+    return 3 bin labels: they could be all different (if high sd)
+    '''
+    if left:
+        df_sd_away = (df - sd).clip(df.min(), df.max())
+    else:
+        df_sd_away = (df + sd).clip(df.min(), df.max())
+    return discretize_actions(df_sd_away, bin_edges)
 
 
 def apply_pca(dataframes, n_components=None):
@@ -294,6 +345,7 @@ def apply_pca(dataframes, n_components=None):
         X_pca = pd.DataFrame(pca.transform(df), columns=np.arange(n_components))
         pca_results.append(X_pca)
     return pca_results
+
 
 def inverse_pca(df, n_components=None):
     if n_components is None:
@@ -341,23 +393,6 @@ def get_action_discretization_rules(
     median_dose_vaso__sequence__discretized[ median_dose_vaso__sequence__discretized == 1 ] = \
         median_dose_vaso__sequence__discretized__no_zeros + 1
 
-    ## Combine both actions discretizations
-    #actions_sequence = median_dose_vaso__sequence__discretized * bins_num + \
-    #    input_4hourly__sequence__discretized
-    #
-    ## Calculate for IV fluids quartiles the median dose given in that quartile
-    #input_4hourly__conversion_from_binned_to_continuous = np.zeros(bins_num)
-    #for bin_ind in range(1, bins_num):
-    #    input_4hourly__conversion_from_binned_to_continuous[bin_ind] = \
-    #    np.median(input_4hourly__sequence__continuous__no_zeros[ \
-    #              input_4hourly__sequence__discretized__no_zeros == bin_ind - 1] )
-    #
-    ## Calculate for vasopressors quartiles the median dose given in that quartile
-    #median_dose_vaso__conversion_from_binned_to_continuous = np.zeros(bins_num)
-    #for bin_ind in range(1, bins_num):
-    #    median_dose_vaso__conversion_from_binned_to_continuous[bin_ind] = \
-    #    np.median(median_dose_vaso__sequence__continuous__no_zeros[ \
-    #              median_dose_vaso__sequence__discretized__no_zeros == bin_ind - 1] )
     # we need this because bounds for validate data may not match
     input_4hourly__bin_bounds = np.insert(input_4hourly__bin_bounds, 0, 0.0)
     input_4hourly__bin_bounds[-1] = np.inf
@@ -366,13 +401,10 @@ def get_action_discretization_rules(
 
     return input_4hourly__bin_bounds, median_dose_vaso__bin_bounds
 
-
-def discretize_actions(iv, vaso, tev_bin_edges, vaso_bin_edges, num_bins=5):
-    labels_iv = pd.cut(iv, tev_bin_edges, include_lowest=True, labels=np.arange(num_bins))
-    labels_vaso = pd.cut(vaso, vaso_bin_edges, include_lowest=True, labels=np.arange(num_bins))
-    action_bins = labels_vaso * num_bins + labels_iv
-    action_bins = action_bins.astype(np.int)
-    return action_bins
+def discretize_actions(df, bin_edges, num_bins=5):
+    bins = pd.cut(df, bin_edges, include_lowest=True, labels=np.arange(num_bins))
+    bins = bins.astype(np.int)
+    return bins
 
 
 def is_terminal_state(s):
