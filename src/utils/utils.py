@@ -20,8 +20,6 @@ def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     #print(check3)
     return (check1 | check2 | check3) == set(ETC)
 
-
-
 def save_data(obj, path):
     with open(path, 'wb') as f:
         pickle.dump(obj, f)
@@ -30,6 +28,7 @@ def save_data(obj, path):
 def save_Q(Q, save_path, num_trials, num_iterations, data_name):
     # TODO: check for instance of class and make sure to save Q instead of an instance
     np.save('{}{}_t{}xi{}'.format(save_path, data_name, num_trials, num_iterations), Q)
+
 
 def detect_binary_value_columns(df):
     '''
@@ -78,12 +77,14 @@ def load_data(generate_new_data=False):
         df_centroids_train, X_clustered_train, X_clustered_val = \
             clustering(X_to_cluster_train, X_to_cluster_val, k=num_states, batch_size=300)
 
-        # add one standard deviation stuff
 
         # stitching up
         print('saving processed data')
-        df_cleansed_train = pd.concat([X_clustered_train, X_train, mu_train, y_train], axis=1)
-        df_cleansed_val = pd.concat([X_clustered_val,  X_val, mu_val, y_val], axis=1)
+        to_concat_train = [X_clustered_train, X_train, mu_train, y_train]
+        to_concat_val = [X_clustered_val, X_val, mu_val, y_val]
+
+        df_cleansed_train = pd.concat(to_concat_train, axis=1)
+        df_cleansed_val = pd.concat(to_concat_val, axis=1)
         df_centroids_train.to_csv(TRAIN_CENTROIDS_DATA_FILEPATH, index=False)
         df_cleansed_train.to_csv(TRAIN_CLEANSED_DATA_FILEPATH, index=False)
         df_cleansed_val.to_csv(VALIDATE_CLEANSED_DATA_FILEPATH, index=False)
@@ -98,21 +99,19 @@ def load_data(generate_new_data=False):
         #X_pca_train.to_csv('pca_train_df', index=False)
         X_pca_val = X_pca_val.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
         #X_pca_val.to_csv('pca_val_df', index=False)
-        X_pca_train , X_pca_val  = apply_pca([X_pca_train, X_pca_val])
+        X_pca_train, X_pca_val  = apply_pca([X_pca_train, X_pca_val])
 
         # k-means clustering to consturct discrete states
         print('clustering for pca features')
         df_centroids_pca_train, X_pca_clustered_train, X_pca_clustered_val = \
                 clustering(X_pca_train, X_pca_val, k=num_states, batch_size=300)
 
-
-        # add one standard deviation stuff
-
-
         # stitching up
         print('saving processed pca data')
-        to_concat_train = [X_pca_clustered_train, mu_train, X_meta_train, X_pca_train, y_train]
-        to_concat_val = [X_pca_clustered_val, mu_val, X_meta_val, X_pca_val, y_val]
+        to_concat_pca_train = [X_pca_clustered_train, mu_train, X_meta_train, X_pca_train, y_train]
+        to_concat_pca_val = [X_pca_clustered_val, mu_val, X_meta_val, X_pca_val, y_val]
+
+        # add one standard deviation stuff
         df_cleansed_pca_train = pd.concat(to_concat_train, axis=1)
         df_cleansed_pca_val = pd.concat(to_concat_val, axis=1)
         df_centroids_pca_train.to_csv(TRAIN_CENTROIDS_PCA_DATA_FILEPATH, index=False)
@@ -144,6 +143,7 @@ def load_data(generate_new_data=False):
             'full': df_pca_full
             }
     }
+
     return data
 
 def _load_data(path):
@@ -227,7 +227,6 @@ def normalize_data(df_train, df_val):
     df_val[COLS_TO_BE_NORMALIZED] /= norm_stds_train
     return df_train, df_val
 
-
 def correct_data(df_train, df_val):
     '''
     we correct both train and val data
@@ -279,38 +278,16 @@ def separate_X_mu_y(df_train, df_val, cols=None):
     bins_vaso_val = discretize_actions(vaso_val, vaso_bin_edges)
     bins_iv_val = discretize_actions(iv_val, iv_bin_edges)
 
-    # bin a data point one s.d. away to the left from the observed  data point
-    # additional analysis to account for binning error
-    sd_vaso = vaso_train.std()
-    sd_iv = iv_train.std()
-
     mu_train['action'] = bins_vaso_train * num_bins + bins_iv_train
     mu_train['action_vaso'] = bins_vaso_train
-    mu_train['action_vaso_sd_left'] = bins_vaso_sd_left_train
-    mu_train['action_vaso_sd_right'] = bins_vaso_sd_right_train
     mu_train['action_iv'] = bins_iv_train
-    mu_train['action_iv_sd_left'] = bins_vaso_sd_left_train
-    mu_train['action_iv_sd_right'] = bins_vaso_sd_right_train
 
     mu_val['action'] = bins_vaso_val * num_bins + bins_iv_val
     mu_val['action_vaso'] = bins_vaso_val
-    mu_val['action_vaso_sd_left'] = bins_vaso_sd_left_val
-    mu_val['action_vaso_sd_right'] = bins_vaso_sd_right_val
     mu_val['action_iv'] = bins_iv_val
-    mu_val['action_iv_sd_left'] = bins_iv_sd_left_val
-    mu_val['action_iv_sd_right'] = bins_iv_sd_right_val
-
     y_train = df_train[OUTCOMES].astype(int)
     y_val = df_val[OUTCOMES].astype(int)
 
-    bins_vaso_sd_left_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_vaso, left=True)
-    bins_vaso_sd_right_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_vaso, left=False)
-    bins_iv_sd_left_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_iv, left=True)
-    bins_iv_sd_right_train = get_sd_away_bins(vaso_train, vaso_bin_edges, sd_iv, left=False)
-    bins_vaso_sd_left_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_vaso, left=True)
-    bins_vaso_sd_right_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_vaso, left=False)
-    bins_iv_sd_left_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_iv, left=True)
-    bins_iv_sd_right_val = get_sd_away_bins(vaso_val, vaso_bin_edges, sd_iv, left=False)
     if cols is None:
         default_cols = set(ALL_VALUES) - set(OUTCOMES)
         X_train = df_train[list(default_cols)]
@@ -321,17 +298,74 @@ def separate_X_mu_y(df_train, df_val, cols=None):
         X_val = df_val[list(observation_cols)]
     return X_train, mu_train, y_train, X_val, mu_val, y_val
 
-def get_sd_away_bins(df, bin_edges, sd, left=True):
-    '''
-    get bins of one standard deviation away from the action
-    for each action (iv and vaso)
-    return 3 bin labels: they could be all different (if high sd)
-    '''
-    if left:
-        df_sd_away = (df - sd).clip(df.min(), df.max())
+
+def get_sd_away_bins(df):
+    if os.path.isfile(STD_BINS_IV_FILEPATH) and os.path.isfile(STD_BINS_VASO_FILEPATH):
+        df_iv = pd.read_csv(STD_BINS_IV_FILEPATH)
+        df_vaso = pd.read_csv(STD_BINS_VASO_FILEPATH)
     else:
-        df_sd_away = (df + sd).clip(df.min(), df.max())
-    return discretize_actions(df_sd_away, bin_edges)
+
+        # bin a data point one s.d. away to the left from the observed  data point
+        # additional analysis to account for binning error
+        state_groups = df.groupby(['state'])
+        # per state standard deviation
+        # find std in the original feature space before binning
+        iv_sd = state_groups['input_4hourly_tev'].std()
+        vaso_sd = state_groups['median_dose_vaso'].std()
+        # find mode in the original feature space before binning
+        iv_mode = state_groups['input_4hourly_tev'].agg(lambda x:x.value_counts().index[0])
+        vaso_mode = state_groups['median_dose_vaso'].agg(lambda x:x.value_counts().index[0])
+        # find binning criteria
+        iv_bin_edges, vaso_bin_edges = get_action_discretization_rules(df['input_4hourly_tev'],
+                                                                       df['median_dose_vaso'])
+        # find std bins
+        vaso_low = df['median_dose_vaso'].min()
+        vaso_high = df['median_dose_vaso'].max()
+        iv_low = df['input_4hourly_tev'].min()
+        iv_high = df['input_4hourly_tev'].max()
+
+        bin_vaso_sd_l, bin_vaso_mode, bin_vaso_sd_r = _get_sd_away_bins(vaso_mode,
+                                                                        vaso_sd,
+                                                                        vaso_low,
+                                                                        vaso_high,
+                                                                        vaso_bin_edges)
+
+        bin_iv_sd_l, bin_iv_mode, bin_iv_sd_r = _get_sd_away_bins(iv_mode,
+                                                                  iv_sd,
+                                                                  iv_low,
+                                                                  iv_high,
+                                                                  iv_bin_edges)
+        bin_vaso_sd_l.name = 'action_vaso_sd_left'
+        bin_vaso_mode.name = 'action_vaso'
+        bin_vaso_sd_r.name = 'action_vaso_sd_right'
+
+        bin_iv_sd_l.name = 'action_iv_sd_left'
+        bin_iv_mode.name = 'action_iv'
+        bin_iv_sd_r.name = 'action_iv_sd_right'
+        df_vaso = pd.concat([bin_vaso_sd_l, bin_vaso_mode, bin_vaso_sd_r], axis=1)
+        df_iv = pd.concat([bin_iv_sd_l, bin_iv_mode, bin_iv_sd_r], axis=1)
+
+        num_bins = 5
+        df_iv.loc[df_iv['action_iv_sd_left'] != df_iv['action_iv'], 'action_iv_sd_left'] = (df_iv['action_iv'].copy() - 1).clip(0, num_bins-1)
+        df_iv.loc[df_iv['action_iv_sd_right'] != df_iv['action_iv'], 'action_iv_sd_right'] = (df_iv['action_iv'].copy() + 1).clip(0, num_bins-1)
+        df_vaso.loc[df_vaso['action_vaso_sd_left'] != df_vaso['action_vaso'], 'action_vaso_sd_left'] = (df_vaso['action_vaso'].copy() - 1).clip(0, num_bins-1)
+        df_vaso.loc[df_vaso['action_vaso_sd_right'] != df_vaso['action_vaso'], 'action_vaso_sd_right'] = (df_vaso['action_vaso'].copy() + 1).clip(0, num_bins-1)
+
+        df_vaso.to_csv(STD_BINS_VASO_FILEPATH, index=False)
+        df_iv.to_csv(STD_BINS_IV_FILEPATH, index=False)
+    return df_vaso, df_iv
+
+
+def _get_sd_away_bins(df_mode, df_sd, low, high, bin_edges):
+    '''
+    binning iv, vaso
+    '''
+    df_sd_l = (df_mode - df_sd).clip(low, high)
+    df_sd_r = (df_mode + df_sd).clip(low, high)
+    l = discretize_actions(df_sd_l, bin_edges)
+    m = discretize_actions(df_mode, bin_edges)
+    r = discretize_actions(df_sd_r, bin_edges)
+    return l, m, r
 
 
 def apply_pca(dataframes, n_components=None):
@@ -342,7 +376,7 @@ def apply_pca(dataframes, n_components=None):
     pca.fit(dataframes[0])
     pca_results = []
     for df in dataframes:
-        X_pca = pd.DataFrame(pca.transform(df), columns=np.arange(n_components))
+        X_pca = pd.DataFrame(pca.transform(df), columns=df.columns)
         pca_results.append(X_pca)
     return pca_results
 
@@ -366,7 +400,6 @@ def clustering(X_train, X_val, k=2000, batch_size=100):
     X_clustered_train = pd.Series(mbk.predict(X_train), name='state')
     X_clustered_val = pd.Series(mbk.predict(X_val), name='state')
     return df_centroids_train, X_clustered_train, X_clustered_val
-
 
 def get_action_discretization_rules(
         input_4hourly__sequence__continuous,
@@ -405,7 +438,6 @@ def discretize_actions(df, bin_edges, num_bins=5):
     bins = pd.cut(df, bin_edges, include_lowest=True, labels=np.arange(num_bins))
     bins = bins.astype(np.int)
     return bins
-
 
 def is_terminal_state(s):
     return s >= (NUM_STATES - NUM_TERMINAL_STATES)

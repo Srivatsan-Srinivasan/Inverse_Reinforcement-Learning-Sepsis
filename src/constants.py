@@ -56,6 +56,9 @@ TRAJECTORIES_IV_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_iv_sd_right.npy'
 TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
 REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix.npy'
 
+
+STD_BINS_IV_FILEPATH = DATA_PATH + 'std_bins_iv.csv'
+STD_BINS_VASO_FILEPATH = DATA_PATH + 'std_bins_vaso.csv'
 # since these are experiment-specific, we save them to
 # save_path = data/today_date/
 PHYSICIAN_Q = 'physician_q'

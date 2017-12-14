@@ -1,4 +1,4 @@
-from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder, apply_phi_to_centroids
+from utils.utils import load_data, extract_trajectories, save_Q, initialize_save_data_folder, apply_phi_to_centroids, get_sd_away_bins
 from utils.evaluation_utils import plot_KL, plot_avg_LL
 from policy.policy import GreedyPolicy, RandomPolicy, StochasticPolicy
 from policy.custom_policy import get_physician_policy
@@ -128,32 +128,23 @@ class ExperimentManager():
         self.pi_expert_mdp_s = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star)
         save_Q(self.pi_expert_mdp_g.Q, self.save_path, self.num_trials, self.num_iterations, MDP_OPTIMAL_Q)
 
-
         # experiments
         self.experiments = []
-        self.pi_phy_vaso = None
-        self.pi_phy_vaso_sd_l = None
-        self.pi_phy_vaso_sd_r = None
-        self.pi_phy_iv = None
-        self.pi_phy_iv_sd_l = None
-        self.pi_phy_iv_sd_r = None
-        self.pi_mdp_vaso_probs = None
-        self.pi_mdp_iv_probs = None
-        self.pi_irl_vaso_probs = None
-        self.pi_irl_iv_probs = None
+
+        df_vaso_sd, df_iv_sd = get_sd_away_bins(self.df)
+        self.df_vaso_sd = df_vaso_sd
+        self.df_iv_sd = df_iv_sd
 
 
-        # self:
-        df = self.df
-        iv_min = df['action_iv'].min()
-        iv_max = df['action_iv'].max()
-        vaso_min = df['action_vaso'].min()
-        vaso_max = df['action_vaso'].max()
-        df.loc[df['action_iv_sd_left'] != df['action_iv'], 'action_iv_sd_left'] = (df['action_iv'].copy() - 1).clip(iv_min, iv_max)
-        df.loc[df['action_iv_sd_right'] != df['action_iv'], 'action_iv_sd_right'] = (df['action_iv'].copy() + 1).clip(iv_min, iv_max)
-        df.loc[df['action_vaso_sd_left'] != df['action_vaso'], 'action_vaso_sd_left'] = (df['action_vaso'].copy() - 1).clip(vaso_min, vaso_max)
-        df.loc[df['action_vaso_sd_right'] != df['action_vaso'], 'action_vaso_sd_right'] = (df['action_vaso'].copy() + 1).clip(vaso_min, vaso_max)
-        self.df = df
+        mdp_vaso_probs, mdp_iv_probs, irl_vaso_probs, irl_iv_probs = \
+            self._prepare_deviation_plots(self.df,
+                                          self.pi_expert_mdp_s,
+                                          pi_irl_s)
+
+        self.pi_mdp_vaso_probs = mdp_vaso_probs
+        self.pi_mdp_iv_probs = mdp_iv_probs
+        self.pi_irl_vaso_probs = irl_vaso_probs
+        self.pi_irl_iv_probs = irl_iv_probs
 
 
     def save_experiment(self, res, exp):
@@ -214,35 +205,24 @@ class ExperimentManager():
                                         NUM_ACTIONS,
                                         res['approx_expert_Q'])
 
-            if self.pi_phy_vaso is None or \
-                self.pi_phy_iv is None or \
-                self.pi_mdp_vaso_probs is None or \
-                self.pi_mdp_iv_probs is None or \
-                self.pi_irl_vaso_probs is None or \
-                self.pi_irl_iv_probs is None:
-                # do this only one time
-                self._prepare_deviation_plots(self.df,
-                                              self.pi_expert_mdp_s,
-                                              pi_irl_s)
 
 
-            sd_vaso = self.df[['action_vaso_sd_left', 'action_vaso', 'action_vaso_sd_right']].drop_duplicates().as_matrix()
-            plot_deviation_from_experts(sd_vaso,
+            plot_deviation_from_experts(self.df_vaso_sd,
                                         self.pi_phy_vaso,
                                         self.pi_mdp_vaso_probs,
                                         self.pi_irl_vaso_probs,
                                         self.img_path,
-                                        exp.experiment_id + '_vaso',
+                                        (exp.experiment_id + '_vaso'),
                                         exp.num_trials,
                                         exp.num_iterations)
 
-            sd_iv = self.df[['action_iv_sd_left', 'action_iv', 'action_iv_sd_right']].drop_duplicates().as_matrix()
-            plot_deviation_from_experts(sd_iv,
+
+            plot_deviation_from_experts(self.df_iv_sd,
                                         self.pi_phy_iv,
                                         self.pi_mdp_iv_probs,
                                         self.pi_irl_iv_probs,
                                         self.img_path,
-                                        exp.experiment_id + '_iv',
+                                        (exp.experiment_id + '_iv'),
                                         exp.num_trials,
                                         exp.num_iterations)
             # kl and loglikelihood
@@ -314,10 +294,8 @@ class ExperimentManager():
         assert np.isclose(np.sum(mdp_iv_probs), NUM_PURE_STATES)
         assert np.isclose(np.sum(irl_vaso_probs), NUM_PURE_STATES)
         assert np.isclose(np.sum(irl_iv_probs), NUM_PURE_STATES)
-        self.pi_mdp_vaso_probs = mdp_vaso_probs
-        self.pi_mdp_iv_probs = mdp_iv_probs
-        self.pi_irl_vaso_probs = irl_vaso_probs
-        self.pi_irl_iv_probs = irl_iv_probs
+
+        return mdp_vaso_probs, mdp_iv_probs, irl_vaso_probs, irl_iv_probs
 
 
     def set_experiment(self, exp):

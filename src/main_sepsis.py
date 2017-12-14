@@ -59,13 +59,13 @@ if __name__ == '__main__':
     )
     em.set_experiment(exp3)
 
-    exp4 = Experiment(
-        experiment_id = cur_t + '_' + 'irl_greedy_mdp_stochatic',
-        policy_expert = em.pi_expert_mdp_s,
-        save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_STOCHASTIC,
-        irl_use_stochastic_policy=False
-    )
-    em.set_experiment(exp4)
+    #exp4 = Experiment(
+    #    experiment_id = cur_t + '_' + 'irl_greedy_mdp_stochatic',
+    #    policy_expert = em.pi_expert_mdp_s,
+    #    save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_STOCHASTIC,
+    #    irl_use_stochastic_policy=False
+    #)
+    #em.set_experiment(exp4)
 
     exp5 = Experiment(
         experiment_id = cur_t + '_' + 'irl_stochastic_physician_greedy',
@@ -83,21 +83,21 @@ if __name__ == '__main__':
     )
     em.set_experiment(exp6)
 
-    exp7 = Experiment(
-        experiment_id = cur_t + '_' + 'irl_stochastic_mdp_greedy',
-        policy_expert = em.pi_expert_mdp_g,
-        save_file_name = cur_t + '_' + IRL_STOCHASTIC_MDP_Q_GREEDY,
-        irl_use_stochastic_policy=True
-    )
-    em.set_experiment(exp7)
-
-    #exp8 = Experiment(
-    #    experiment_id = 'irl_stochastic_mdp_stochatic',
-    #    policy_expert = em.pi_expert_mdp_s,
-    #    save_file_name = cur_t + '_' + IRL_STOCHASTIC_MDP_Q_STOCHASTIC,
+    #exp7 = Experiment(
+    #    experiment_id = cur_t + '_' + 'irl_stochastic_mdp_greedy',
+    #    policy_expert = em.pi_expert_mdp_g,
+    #    save_file_name = cur_t + '_' + IRL_STOCHASTIC_MDP_Q_GREEDY,
     #    irl_use_stochastic_policy=True
     #)
-    #em.set_experiment(exp8)
+    #em.set_experiment(exp7)
+
+    exp8 = Experiment(
+        experiment_id = 'irl_stochastic_mdp_stochatic',
+        policy_expert = em.pi_expert_mdp_s,
+        save_file_name = cur_t + '_' + IRL_STOCHASTIC_MDP_Q_STOCHASTIC,
+        irl_use_stochastic_policy=True
+    )
+    em.set_experiment(exp8)
 
     em.run()
 

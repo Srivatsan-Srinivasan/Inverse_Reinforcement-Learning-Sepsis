@@ -30,7 +30,7 @@ def plot_margin_expected_value(margins, num_trials, num_iterations, save_path, p
     fig = plt.figure(figsize=(10, 10))
     plt.ylim((0, np.max(margins) * 1.2))
     plt.errorbar(np.arange(1, num_iterations+1), avg_margins,
-                 label=r'$w^T\mu_E-w^T\mu_{\tilde{\pi}}$',
+                 label='Difference in value',
                  yerr=margin_se, fmt='-o', lw=3)
     plt.xticks(np.arange(0, num_iterations+1, 5))
     plt.tick_params(labelsize=FONT_SIZE)
@@ -71,8 +71,8 @@ def plot_value_function(v_pis, v_pi_expert, num_trials, num_iterations, save_pat
     max_ylim = np.max([np.max(avg_v_pis), v_pi_expert])
     plt.ylim((min_ylim*.8, max_ylim*1.2))
     plt.errorbar(np.arange(1, num_iterations+1), avg_v_pis, yerr=v_pi_se,
-                 fmt='-o', label=r'$E_{s_0 \sim D(s)}[V^{\tilde \pi}(s_0)]$', lw=3)
-    plt.axhline(v_pi_expert, label=r'$E_{s_0 \sim D(s)}[V^{\pi_E}(s_0)]$', c='c', lw=3)
+                 fmt='-o', label='Value of IRL Policy', lw=3)
+    plt.axhline(v_pi_expert, label='Value of Expert Policy', c='c', lw=3)
     plt.xticks(np.arange(1, num_iterations+1, 5))
     plt.tick_params(labelsize=FONT_SIZE)
     plt.xlabel('Number of iterations', fontsize=FONT_SIZE)
@@ -120,7 +120,7 @@ def plot_deviation_from_experts(sd,
     # hyperparameters
     # some preprocessing, cap bin jump by one bin only
     # e.g. for iv, std is too high, it often jumps by two bins
-    thresholds = np.array([0.20, 0.30, 0.50])
+    thresholds = np.array([0.05, 0.15, 0.25])
     pi_phy_probs = pi_phy.query_Q_probs()
     violations = np.zeros((2, len(thresholds), NUM_PURE_STATES))
     num_bins = 5
@@ -128,18 +128,16 @@ def plot_deviation_from_experts(sd,
     for i, pi in enumerate([pi_mdp_probs, pi_irl_probs]):
         for j, th in enumerate(thresholds):
             for s in range(NUM_PURE_STATES):
-                mode_action = np.argmax(pi_phy_probs[s, :])
                 # @hack @todo fix this better
+                # action indices far from mode action (w/ sigma)
                 mask = np.ones(num_bins, dtype=bool)
-                aa = sd[sd[:, 1] == mode_action]
-                #for k, _ in enumerate(aa):
-                #    mask[np.unique(aa[k])] = 0
-                # @hack
-                mask[np.unique(aa[0])] = 0
-                no_sigma_action_idx = bins[mask]
+                mask[np.unique(sd.iloc[s, :].tolist())] = 0
                 # not included in -sigma, +sigma of mode
-                num_violations = np.sum(pi[s, no_sigma_action_idx] > th)
-                violations[i, j, s] = 0 if len(no_sigma_action_idx) == 0 else num_violations / len(no_sigma_action_idx)
+                num_violations = np.sum(pi[s, mask] > th)
+                if np.sum(mask) == 0:
+                    violations[i, j, s] = 0
+                else:
+                    violations[i, j, s] = num_violations / np.sum(mask)
             violations[i, j] = 100 * np.array(sorted(violations[i, j], reverse=True))
 
     fig= plt.figure(figsize=(10,10))
@@ -149,7 +147,7 @@ def plot_deviation_from_experts(sd,
     colors = [['firebrick', 'red', 'darksalmon'], ['blue', 'royalblue', 'navy']]
     for i, _ in enumerate([pi_mdp_probs, pi_irl_probs]):
         for j, th in enumerate(thresholds):
-            plt.plot(violations[i, j, :], linestyle=linestyles[i], c=colors[i][j], label='{}, threshold={:.2f}%'.format(desc[i], 100.0 * th))
+            plt.plot(violations[i, j, :], linestyle=linestyles[i], c=colors[i][j], label='{}, threshold={}%'.format(desc[i], 100 * th))
     quartiles = np.arange(5)/4.0
     plt.xticks(np.around(750 * quartiles), 100 * quartiles)
     plt.legend(loc='best')
@@ -216,13 +214,14 @@ def plot_intermediate_rewards_vs_mortality(intermediate_rewards,
     avg_mortality_per_state = np.array(avg_mortality_per_state)
     intermediate_rewards = intermediate_rewards[np.flatnonzero(avg_mortality_per_state > 70)]
     high_mortality_states = avg_mortality_per_state[np.flatnonzero(avg_mortality_per_state > 70)]
-    sc = plt.scatter(np.arange(len(intermediate_rewards)), sorted(intermediate_rewards, reverse=True), c=high_mortality_states, cmap='Reds', label='hello world')
+    sc = plt.scatter(np.arange(len(intermediate_rewards)), sorted(intermediate_rewards, reverse=True), c=high_mortality_states, cmap='Reds')
     plt.axhline(1, c='b', lw=3, linestyle='--')
     plt.axhline(-1, c='b', lw=3, linestyle='--')
     plt.legend(loc='best')
-    plt.xlabel('States')
-    plt.ylabel('Intermediate Rewards')
-    plt.colorbar(sc)
+    plt.xlabel('States', size=FONT_SIZE)
+    plt.ylabel('Intermediate Rewards', size=FONT_SIZE)
+    cb = plt.colorbar(sc)
+    cb.ax.set_ylabel('Average Mortality Per State (%)', rotation=270, size=FONT_SIZE)
     fig.savefig('{}{}_intermediate_rewards_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
