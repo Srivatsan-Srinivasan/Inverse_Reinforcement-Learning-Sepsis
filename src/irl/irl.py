@@ -20,6 +20,13 @@ def make_initial_state_sampler(df, has_priority=True):
         f = lambda : np.random.choice(initial_states)
     return f
 
+def get_initial_state_distribution(df):
+    '''
+    we only care about empirically observed initial states.
+    '''
+    probs = df[df['bloc'] == 1]['state'].value_counts(normalize=True).tolist()
+    return probs
+
 
 def make_state_centroid_finder(df, columns=None):
     if columns is not None:
@@ -29,20 +36,28 @@ def make_state_centroid_finder(df, columns=None):
     return f
 
 
-def estimate_feature_expectation(transition_matrix, sample_initial_state, phi, pi,
-                                 gamma=0.99, num_trajectories=300, max_iter=1000):
+def sample_state(probs):
+    return np.random.choice(np.arange(len(probs)), p=probs)
+
+def estimate_feature_expectation(transition_matrix,
+                                 initial_state_probs,
+                                 phi,
+                                 pi,
+                                 num_trajectories=300,
+                                 gamma=0.99,
+                                 max_iter=1000):
     '''
     estimate mu_pi and v_pi with monte carlo simulation
     '''
 
-    s = sample_initial_state()
+    s = sample_state(initial_state_probs)
     mu = np.zeros((phi.shape[1]))
     v_sum = 0.0
 
     mus = []
     vs = []
     for i in range(num_trajectories):
-        s = sample_initial_state()
+        s = sample_state(initial_state_probs)
         for t in itertools.count():
             if t > max_iter:
                 print('max iter timeout broke')
@@ -120,7 +135,7 @@ def make_reward_computer(W, phi):
         return np.dot(W, phi[state, :])
     return compute_reward
 
-def estimate_v_pi_tilda(W, mu, sample_initial_state, sample_size=100):
+def estimate_v_pi_tilda(W, mu, initial_state_probs, sample_size=100):
     # this does not work. don't use this for now.
     v_pi_tilda = np.dot(W, mu)
     # remove two terminal_states
@@ -128,6 +143,6 @@ def estimate_v_pi_tilda(W, mu, sample_initial_state, sample_size=100):
     v_pi_tilda_est = 0.0
     # TODO: vectorize this
     for _ in range(sample_size):
-        s_0 = sample_initial_state()
+        s_0 = sample_state(initial_state_probs)
         v_pi_tilda_est += v_pi_tilda[s_0]
     return v_pi_tilda_est / sample_size

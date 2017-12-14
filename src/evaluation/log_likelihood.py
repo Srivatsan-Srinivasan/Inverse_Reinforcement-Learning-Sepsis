@@ -5,12 +5,12 @@ import numpy as np
 import math
 import pdb
 
-def test_code():
-    print("Hello")
-    
 #opt_policy_learned should be a stochastic policy for each state, essentially a 750*25 array.
 #phy_policy is single point estimate - one for each state - 750*1 array. phi_policy_stochastic is again 750*25 array.
 def get_log_likelihood(df, opt_policy_learned, phy_policy, phy_policy_stochastic, num_states = NUM_PURE_STATES, num_actions=25, no_int_id=0, restrict_num = False, avg = False):
+    opt_policy_learned = opt_policy_learned.query_Q_probs()
+    phy_policy = phy_policy.get_opt_actions()
+    phy_policy_stochastic = phy_policy_stochastic.query_Q_probs()
     trajs = extract_trajectories(df, num_states, TRAIN_TRAJECTORIES_FILEPATH)
     uni_trajs = np.unique(trajs[:, 0])
     LL = {}
@@ -35,6 +35,8 @@ def get_log_likelihood(df, opt_policy_learned, phy_policy, phy_policy_stochastic
     return LL
 
 def get_KL_divergence(phy_policy_stochastic, opt_policy_learned, significant_states = range(750)):
+    opt_policy_learned = opt_policy_learned.query_Q_probs()
+    phy_policy_stochastic = phy_policy_stochastic.query_Q_probs()
     no_int_policy = eu.gen_single_action_probability()
     random_policy = eu.gen_random_probability()
 
@@ -46,7 +48,7 @@ def get_KL_divergence(phy_policy_stochastic, opt_policy_learned, significant_sta
         opt_policy = opt_policy_learned[state]
         KL[state] = {"IRL" : eu.KL_divergence(phy_policy,opt_policy),
                      "random" : eu.KL_divergence(phy_policy,random_policy),
-                     "no_int_policy" : eu.KL_divergence(phy_policy,no_int_policy) ,                  
+                     "no_int_policy" : eu.KL_divergence(phy_policy,no_int_policy) ,
                      "vaso_only_random" : eu.KL_divergence(phy_policy,vaso_only_random_policy),
                      "iv_only_random" : eu.KL_divergence(phy_policy,iv_only_random_policy)
                     }

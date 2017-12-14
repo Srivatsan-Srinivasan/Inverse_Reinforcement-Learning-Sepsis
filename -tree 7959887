@@ -1,0 +1,60 @@
+[33maafb5b6[m HEAD@{0}: pull origin master: Merge made by the 'recursive' strategy.
+[33mea3a25d[m HEAD@{1}: filter-branch: rewrite
+[33m4670bc8[m HEAD@{2}: filter-branch: rewrite
+[33mf079da7[m HEAD@{3}: pull: Merge made by the 'recursive' strategy.
+[33m68ff1b5[m HEAD@{4}: filter-branch: rewrite
+[33m7fba26e[m HEAD@{5}: commit: delete large file
+[33m3f92998[m HEAD@{6}: rebase -i (finish): returning to refs/heads/master
+[33m3f92998[m HEAD@{7}: rebase -i (start): checkout HEAD~4
+[33m7959887[m HEAD@{8}: rebase -i (finish): returning to refs/heads/master
+[33m7959887[m HEAD@{9}: rebase -i (start): checkout HEAD~4
+[33m7959887[m HEAD@{10}: rebase -i (finish): returning to refs/heads/master
+[33m7959887[m HEAD@{11}: rebase -i (start): checkout HEAD~4
+[33m7959887[m HEAD@{12}: commit: commit
+[33m8886316[m HEAD@{13}: commit: add visualization demo in test.ipynb
+[33m5b2aac5[m HEAD@{14}: commit: implement weight and Q visualizer
+[33mf5525e4[m HEAD@{15}: commit: test KL and LL plot working
+[33m3f92998[m HEAD@{16}: commit: add test outputs and ignore only sensitive files
+[33ma11ff8f[m HEAD@{17}: commit: improve test utility
+[33m622f426[m HEAD@{18}: commit: refactor plotting and saving key vars
+[33m8623bb2[m HEAD@{19}: commit: fix q
+[33m6f21a1d[m HEAD@{20}: commit: add save_results in irl
+[33mf21928c[m HEAD@{21}: commit (merge): Merge branch 'test-performance'
+[33m3f8b6bf[m HEAD@{22}: checkout: moving from test-performance to master
+[33mcc4f72c[m HEAD@{23}: commit: remove some file
+[33mdb4499e[m HEAD@{24}: checkout: moving from master to test-performance
+[33m3f8b6bf[m HEAD@{25}: pull origin master: Fast-forward
+[33m06d9c16[m HEAD@{26}: checkout: moving from test-performance to master
+[33mdb4499e[m HEAD@{27}: commit: update extract pysician policy
+[33m91f5876[m HEAD@{28}: commit: implement train/test import and update util functions accordingly
+[33m763e745[m HEAD@{29}: checkout: moving from master to test-performance
+[33m06d9c16[m HEAD@{30}: commit (merge): Merge remote-tracking branch 'origin/gridworld_lz'
+[33m1023d93[m HEAD@{31}: checkout: moving from test-performance to master
+[33m763e745[m HEAD@{32}: commit: fix
+[33m1023d93[m HEAD@{33}: checkout: moving from master to test-performance
+[33m1023d93[m HEAD@{34}: checkout: moving from test-performance to master
+[33m1023d93[m HEAD@{35}: checkout: moving from master to test-performance
+[33m1023d93[m HEAD@{36}: commit: fix merge conflict in gitignore
+[33m266128e[m HEAD@{37}: checkout: moving from fix-irl to master
+[33m266128e[m HEAD@{38}: checkout: moving from master to fix-irl
+[33m266128e[m HEAD@{39}: merge fix-irl: Fast-forward
+[33m8fde7f4[m HEAD@{40}: checkout: moving from fix-irl to master
+[33m266128e[m HEAD@{41}: commit: add train and test csv loader
+[33m8fde7f4[m HEAD@{42}: checkout: moving from master to fix-irl
+[33m8fde7f4[m HEAD@{43}: checkout: moving from fix-irl to master
+[33m8fde7f4[m HEAD@{44}: merge master: Fast-forward
+[33mdc546f3[m HEAD@{45}: checkout: moving from master to fix-irl
+[33m8fde7f4[m HEAD@{46}: commit: fix typo in README
+[33m8ac247e[m HEAD@{47}: commit (merge): Merge branch 'master' of github.com:dtak/cs282-f17-dh-srivatsan-linying
+[33mdc546f3[m HEAD@{48}: merge fix-irl: Fast-forward
+[33m67db40f[m HEAD@{49}: checkout: moving from fix-irl to master
+[33mdc546f3[m HEAD@{50}: commit: refactor maxmargin
+[33mbd110c7[m HEAD@{51}: commit: fix resolution
+[33m0133e4b[m HEAD@{52}: commit: fix image resolution
+[33m5e393b5[m HEAD@{53}: commit: fix README
+[33m0fa3d63[m HEAD@{54}: commit: fix max margin learner
+[33mdca9e12[m HEAD@{55}: commit: add dirchlet support for stochastic policy
+[33m0a476c9[m HEAD@{56}: commit: refactor policy
+[33m24bbdda[m HEAD@{57}: commit: optimize iterate_policy evaluate_policy
+[33m67db40f[m HEAD@{58}: checkout: moving from master to fix-irl
+[33m67db40f[m HEAD@{59}: clone: from git@github.com:Srivatsan-Srinivasan/CS282-Final-Project.git

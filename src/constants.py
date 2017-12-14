@@ -19,6 +19,41 @@ TRAIN_FILEPATH = DATA_PATH + 'Sepsis_imp_train.csv'
 TRAIN_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_train.csv'
 TRAIN_CENTROIDS_DATA_FILEPATH = DATA_PATH + 'centroids_data_train.csv'
 
+# PCA starts
+TRAIN_CLEANSED_PCA_DATA_FILEPATH = DATA_PATH + 'cleansed_data_pca_train.csv'
+TRAIN_CENTROIDS_PCA_DATA_FILEPATH = DATA_PATH + 'centroids_data_pca_train.csv'
+VALIDATE_CLEANSED_PCA_DATA_FILEPATH = DATA_PATH + 'cleansed_data_pca_val.csv'
+
+TRAIN_TRAJECTORIES_PCA_FILEPATH = DATA_PATH + 'trajectories_pca_train.npy'
+TRAIN_TRANSITION_MATRIX_PCA_FILEPATH = DATA_PATH + 'transition_pca_matrix_train.npy'
+
+TRAJECTORIES_PCA_FILEPATH = DATA_PATH + 'trajectories_pca.npy'
+TRAJECTORIES_PCA_VASO_FILEPATH = DATA_PATH + 'trajectories_pca_vaso.npy'
+TRAJECTORIES_PCA_VASO_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_pca_vaso_sd_left.npy'
+TRAJECTORIES_PCA_VASO_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_pca_vaso_sd_right.npy'
+TRAJECTORIES_PCA_IV_FILEPATH = DATA_PATH + 'trajectories_pca_iv.npy'
+TRAJECTORIES_PCA_IV_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_pca_iv_sd_left.npy'
+TRAJECTORIES_PCA_IV_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_pca_iv_sd_right.npy'
+TRANSITION_MATRIX_PCA_FILEPATH = DATA_PATH + 'transition_matrix_pca.npy'
+# PCA ends
+
+# K prototype starts
+TRAIN_CLEANSED_KP_DATA_FILEPATH = DATA_PATH + 'cleansed_data_kp_train.csv'
+TRAIN_CENTROIDS_KP_DATA_FILEPATH = DATA_PATH + 'centroids_data_kp_train.csv'
+VALIDATE_CLEANSED_KP_DATA_FILEPATH = DATA_PATH + 'cleansed_data_kp_val.csv'
+TRAIN_TRAJECTORIES_KP_FILEPATH = DATA_PATH + 'trajectories_kp_train.npy'
+TRAIN_TRANSITION_MATRIX_KP_FILEPATH = DATA_PATH + 'transition_kp_matrix_train.npy'
+TRAJECTORIES_KP_FILEPATH = DATA_PATH + 'trajectories_kp.npy'
+TRAJECTORIES_KP_VASO_FILEPATH = DATA_PATH + 'trajectories_kp_vaso.npy'
+TRAJECTORIES_KP_VASO_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_kp_vaso_sd_left.npy'
+TRAJECTORIES_KP_VASO_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_kp_vaso_sd_right.npy'
+TRAJECTORIES_KP_IV_FILEPATH = DATA_PATH + 'trajectories_kp_iv.npy'
+TRAJECTORIES_KP_IV_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_jp_iv_sd_left.npy'
+TRAJECTORIES_KP_IV_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_kp_iv_sd_right.npy'
+TRANSITION_MATRIX_KP_FILEPATH = DATA_PATH + 'transition_matrix_kp.npy'
+# K prototype ends
+
+
 VALIDATE_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
 VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_val.csv'
 # we don't use this for now
@@ -28,18 +63,32 @@ TRAIN_TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories_train.npy'
 TRAIN_TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix_train.npy'
 TRAIN_REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix_train.npy'
 
-TRAJECTORIES_FILEPATH = DATA_PATH + 'trajectories.npy'
+TRAJECTORIES_FILEPATH= DATA_PATH + 'trajectories.npy'
+TRAJECTORIES_VASO_FILEPATH = DATA_PATH + 'trajectories_vaso.npy'
+TRAJECTORIES_VASO_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_vaso_sd_left.npy'
+TRAJECTORIES_VASO_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_vaso_sd_right.npy'
+TRAJECTORIES_IV_FILEPATH = DATA_PATH + 'trajectories_iv.npy'
+TRAJECTORIES_IV_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_iv_sd_left.npy'
+TRAJECTORIES_IV_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_iv_sd_right.npy'
 TRANSITION_MATRIX_FILEPATH = DATA_PATH + 'transition_matrix.npy'
 REWARD_MATRIX_FILEPATH = DATA_PATH + 'reward_matrix.npy'
 
+
+STD_BINS_IV_FILEPATH = DATA_PATH + 'std_bins_iv.csv'
+STD_BINS_VASO_FILEPATH = DATA_PATH + 'std_bins_vaso.csv'
 # since these are experiment-specific, we save them to
 # save_path = data/today_date/
 PHYSICIAN_Q = 'physician_q'
 MDP_OPTIMAL_Q = 'mdp_optimal_q'
-IRL_PHYSICIAN_Q_GREEDY = 'irl_physician_q_greedy'
-IRL_PHYSICIAN_Q_STOCHASTIC ='irl_physician_q_stochastic'
-IRL_MDP_Q_GREEDY = 'irl_mdp_q_greedy'
-IRL_MDP_Q_STOCHASTIC = 'irl_mdp_q_stochastic'
+IRL_STOCHASTIC_PHYSICIAN_Q_GREEDY = 'irl_stochastic_physician_q_greedy'
+IRL_STOCHASTIC_PHYSICIAN_Q_STOCHASTIC ='irl_stochastic_physician_q_stochastic'
+IRL_STOCHASTIC_MDP_Q_GREEDY = 'irl_stochastic_mdp_q_greedy'
+IRL_STOCHASTIC_MDP_Q_STOCHASTIC = 'irl_stochastic_mdp_q_stochastic'
+IRL_GREEDY_PHYSICIAN_Q_GREEDY = 'irl_greedy_physician_q_greedy'
+IRL_GREEDY_PHYSICIAN_Q_GREEDY = 'irl_greedy_physician_q_greedy'
+IRL_GREEDY_PHYSICIAN_Q_STOCHASTIC ='irl_greedy_physician_q_stochastic'
+IRL_GREEDY_MDP_Q_GREEDY = 'irl_greedy_mdp_q_greedy'
+IRL_GREEDY_MDP_Q_STOCHASTIC = 'irl_greedy_mdp_q_stochastic'
 
 Q_STAR_FILEPATH = DATA_PATH + 'q_star.npy'
 Q_CLINICIAN_FILEPATH = DATA_PATH + 'q_clinician.npy'
@@ -69,7 +118,7 @@ INTERVENTIONS = ['input_total_tev','input_4hourly_tev','median_dose_vaso' ,'max_
 
 TRUE_INTERVENTIONS = ['median_dose_vaso', 'max_dose_vaso', 'input_total_tev', 'input_4hourly_tev', 'cumulated_balance_tev', 'sedation', 'mechvent', 'rrt']
 
-# shock_index is a ratio 
+# shock_index is a ratio
 SUMMARY_INDEX = ['elixhauser', 'SOFA', 'SIRS', 'GCS', 'Shock_Index']
 
 TIME = ['bloc', 'charttime']
@@ -80,14 +129,15 @@ OUTCOMES = ['died_in_hosp', 'mortality_90d']
 CATEGORICAL_ORDINAL = SUMMARY_INDEX + ['bloc']
 CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 # numerical should not be scale-invariant?
-# does it make sense to interprete the mean of these multiplied by some constant? 
+# does it make sense to interprete the mean of these multiplied by some constant?
 # if yes, it should go here
 # we don't normalize interventions
-#COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX 
+#COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX
 # TODO: this does not make sense but will fix later
 # when we do clustering other than kmeans
 ETC = ['age', 'charttime']
-COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
+COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + ['age', 'cumulated_balance_tev'] + ['Shock_Index', 'GCS']
+COLS_TO_BE_NORMALIZED_PLUS = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
 # NEW UPDATE TO MAKE IT COMPATIBLE WITH PHI(S)
 #BINARY_COLS = ['gender', 're_admission', 'sedation', 'mechvent', 'rrt', 'died_in_hosp', 'mortality_90d']
 #COLS_TO_BE_NORMALIZED = list(set(COLS_TO_BE_NORMALIZED) - set(BINARY_COLS))

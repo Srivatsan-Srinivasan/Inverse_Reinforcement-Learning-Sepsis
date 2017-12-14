@@ -11,7 +11,7 @@ import gridworld.gridworld_project as env
 from gridworld.policy import GreedyPolicy
 
 
-# grid_world = [   # HERE: Make this one bigger, probably! 
+# grid_world = [   # HERE: Make this one bigger, probably!
 #     '#########',
 #     '#..#....#',
 #     '#..#..#.#',
@@ -34,8 +34,6 @@ happy_grid = [
 
 
 if __name__ == '__main__':
-
-    
     num_iterations = 10
     num_trials = 3
     num_exp_trajectories = 0
@@ -45,13 +43,13 @@ if __name__ == '__main__':
     # experiment_id= 'happygrid_goal1_'
     task_name = happy_grid
     action_error_prob = 0.0
-    pit_reward = -50      
-    
+    pit_reward = -50
+
     task = env.GridWorld( task_name,
-                        action_error_prob=action_error_prob, 
+                        action_error_prob=action_error_prob,
                         rewards={'*': 4, 'moved': 0, 'hit-wall': 0,'X': pit_reward} ,
                         terminal_markers='*' )
-    NUM_STATES = task.num_states  
+    NUM_STATES = task.num_states
     NUM_ACTIONS = task.num_actions
     NUM_FEATURES = 16
 

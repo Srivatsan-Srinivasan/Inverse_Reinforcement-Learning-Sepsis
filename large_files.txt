@@ -1,0 +1,37 @@
+113100880 src/data/transition_matrix_train.npy
+113100880 src/data/transition_matrix_train_backup2.npy
+113100880 src/data/backup/transition_matrix.npy
+10088240 src/data/backup/trajectories.npy
+6031600 src/data/trajectories_train.npy
+1106498 states_list.csv
+1106498 src/data/states_list.csv
+1106498 states_list.csv
+1106498 src/data/states_list.csv
+1106498 data/states_list.csv
+113100880 src/data/transition_matrix_train.npy
+113100880 src/data/transition_matrix_train_backup2.npy
+113100880 src/data/backup/transition_matrix.npy
+10088240 src/data/backup/trajectories.npy
+6031600 src/data/trajectories_train.npy
+1106498 states_list.csv
+1106498 src/data/states_list.csv
+1106498 data/states_list.csv
+21264903 Papers/2017 UNSUPERVISED PERCEPTUAL REWARDS FOR IMITATION LEARNING.pdf
+10572105 Papers/2016 Incorporating Human Domain Knowledge into Large Scale Cost Function Learning.pdf
+10248381 Papers/Imitation_Learning.pdf
+8213154 Papers/inverseRL.pdf
+5496143 Papers/2016 Guided Cost Learning Deep Inverse Optimal Control via Policy Optimization.pdf
+5197420 Papers/2016 Watch This Scalable Cost-Function Learning for Path Planning in Urban Environments.pdf
+4426174 Papers/failure_irl.pdf
+4426174 Papers/2016 Inverse Reinforcement Learning from Failure.pdf
+2811597 Papers/2016 A Connection Between Generative Adversarial Networks, Inverse Reinforcement Learning, and Energy-Based Models.pdf
+2400548 Papers/2006 Maximum Margin Planning.pdf
+2380503 Papers/option_gan_irl.pdf
+1630730 Papers/2000 Algorithms for Inverse Reinforcement Learning.pdf
+1532978 Papers/2016 Generative Adversarial Imitation Learning .pdf
+1515643 Papers/2010 Maximum Entropy Inverse Reinforcement Learning.pdf
+1172260 Papers/2015 Maximum Entropy Deep Inverse Reinforcement Learning.pdf
+1152852 Papers/2011 Nonlinear Inverse Reinforcement Learning with Gaussian Processes.pdf
+1135327 Papers/2004 Apprenticeship Learning via Inverse Reinforcement Learning.pdf
+1104788 Papers/maximum_ent_deepirl.pdf
+1019028 Papers/Perceptual_Rewards.pdf
