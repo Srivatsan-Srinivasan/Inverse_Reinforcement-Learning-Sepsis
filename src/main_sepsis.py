@@ -14,6 +14,10 @@ def get_arg_parser():
     parser.set_defaults(verbose=False)
     parser.add_argument('-up', '--use_pca', action='store_true', dest='use_pca')
     parser.set_defaults(use_pca=False)
+    parser.add_argument('-cm', '--clustering_method', default='km', type=str,
+                        help="kmeans or kprototype (cao, huang)",
+                        dest="clustering_method", choices=['km', 'kp'])
+    parser.add_argument('-ns', '--num_states', default=750, type=int, dest='num_states')
     parser.add_argument('-p', '--parallelized', action='store_true', dest='parallelized')
     parser.set_defaults(parallelized=False)
     parser.add_argument('-nt', '--num_trials', default=2, type=int, dest='num_trials')
@@ -35,37 +39,37 @@ if __name__ == '__main__':
     em = ExperimentManager(args)
 
     cur_t = time.strftime('%y%m%d_%H%M%S', time.gmtime())
-#    exp1 = Experiment(
-#        experiment_id =  cur_t + '_' + 'irl_greedy_physician_greedy',
-#        policy_expert = em.pi_expert_phy_g,
-#        save_file_name = cur_t + '_' + IRL_GREEDY_PHYSICIAN_Q_GREEDY ,
-#        irl_use_stochastic_policy=False
-#    )
-#    em.set_experiment(exp1)
-#
-#    exp2 = Experiment(
-#        experiment_id = cur_t + '_' + 'irl_greedy_physician_stochastic',
-#        policy_expert = em.pi_expert_phy_s,
-#        save_file_name = cur_t + '_' +  IRL_GREEDY_PHYSICIAN_Q_STOCHASTIC,
-#        irl_use_stochastic_policy=False
-#    )
-#    em.set_experiment(exp2)
-#
-#    exp3 = Experiment(
-#        experiment_id = cur_t + '_' + 'irl_greedy_mdp_greedy',
-#        policy_expert = em.pi_expert_mdp_g,
-#        save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_GREEDY,
-#        irl_use_stochastic_policy=False
-#    )
-#    em.set_experiment(exp3)
-#
-    #exp4 = Experiment(
-    #    experiment_id = cur_t + '_' + 'irl_greedy_mdp_stochatic',
-    #    policy_expert = em.pi_expert_mdp_s,
-    #    save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_STOCHASTIC,
-    #    irl_use_stochastic_policy=False
-    #)
-    #em.set_experiment(exp4)
+    exp1 = Experiment(
+        experiment_id =  cur_t + '_' + 'irl_greedy_physician_greedy',
+        policy_expert = em.pi_expert_phy_g,
+        save_file_name = cur_t + '_' + IRL_GREEDY_PHYSICIAN_Q_GREEDY ,
+        irl_use_stochastic_policy=False
+    )
+    em.set_experiment(exp1)
+
+    exp2 = Experiment(
+        experiment_id = cur_t + '_' + 'irl_greedy_physician_stochastic',
+        policy_expert = em.pi_expert_phy_s,
+        save_file_name = cur_t + '_' +  IRL_GREEDY_PHYSICIAN_Q_STOCHASTIC,
+        irl_use_stochastic_policy=False
+    )
+    em.set_experiment(exp2)
+
+    exp3 = Experiment(
+        experiment_id = cur_t + '_' + 'irl_greedy_mdp_greedy',
+        policy_expert = em.pi_expert_mdp_g,
+        save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_GREEDY,
+        irl_use_stochastic_policy=False
+    )
+    em.set_experiment(exp3)
+
+    exp4 = Experiment(
+        experiment_id = cur_t + '_' + 'irl_greedy_mdp_stochatic',
+        policy_expert = em.pi_expert_mdp_s,
+        save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_STOCHASTIC,
+        irl_use_stochastic_policy=False
+    )
+    em.set_experiment(exp4)
 
     exp5 = Experiment(
         experiment_id = cur_t + '_' + 'irl_stochastic_physician_greedy',
