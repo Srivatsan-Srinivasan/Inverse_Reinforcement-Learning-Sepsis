@@ -10,6 +10,7 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn import preprocessing
 from constants import *
 import pickle
+from kmodes.kprototypes import KPrototypes
 
 def check_numerical_categorical(all_cols, categorical_cols, numerical_cols):
     check1 = (set(numerical_cols) - set(all_cols))
@@ -38,13 +39,19 @@ def detect_binary_value_columns(df):
     return [col for col in df if df[col].dropna().value_counts().index.isin([0,1]).all()]
 
 
-def load_data(generate_new_data=False):
-    num_states = NUM_STATES - NUM_TERMINAL_STATES
+def load_data(generate_new_data=False,
+              num_states=(NUM_STATES-NUM_TERMINAL_STATES)):
+    # @todo append num_states to filename
     if not generate_new_data and os.path.isfile(TRAIN_CLEANSED_DATA_FILEPATH) and os.path.isfile(VALIDATE_CLEANSED_DATA_FILEPATH):
         print('loading preprocessed data as they already exist')
         df_cleansed_train = _load_data(TRAIN_CLEANSED_DATA_FILEPATH)
         df_cleansed_val = _load_data(VALIDATE_CLEANSED_DATA_FILEPATH)
         df_centroids_train = _load_data(TRAIN_CENTROIDS_DATA_FILEPATH)
+
+        df_cleansed_train_kp = _load_data(TRAIN_CLEANSED_KP_DATA_FILEPATH)
+        df_cleansed_val_kp = _load_data(VALIDATE_CLEANSED_KP_DATA_FILEPATH)
+        df_centroids_train_kp = _load_data(TRAIN_CENTROIDS_KP_DATA_FILEPATH)
+
         df_cleansed_pca_train = _load_data(TRAIN_CLEANSED_PCA_DATA_FILEPATH)
         df_cleansed_pca_val = _load_data(VALIDATE_CLEANSED_PCA_DATA_FILEPATH)
         df_centroids_pca_train = _load_data(TRAIN_CENTROIDS_PCA_DATA_FILEPATH)
@@ -59,7 +66,8 @@ def load_data(generate_new_data=False):
         assert not df_corrected_train.isnull().values.any(), "there's null values in df_corrected_train"
         assert not df_corrected_val.isnull().values.any(), "there's null values in df_corrected_val"
         print('standardizing data')
-        df_norm_train, df_norm_val = normalize_data(df_corrected_train, df_corrected_val)
+        df_norm_train, df_norm_val = normalize_data(df_corrected_train,
+                                                    df_corrected_val)
         assert not df_norm_train.isnull().values.any(), "there's null values in df_norm_train"
         assert not df_norm_val.isnull().values.any(), "there's null values in df_norm_val"
         # separate x mu y from df
@@ -77,8 +85,7 @@ def load_data(generate_new_data=False):
         df_centroids_train, X_clustered_train, X_clustered_val = \
             clustering(X_to_cluster_train, X_to_cluster_val, k=num_states, batch_size=300)
 
-
-        # stitching up
+        # k-means stitching up
         print('saving processed data')
         to_concat_train = [X_clustered_train, X_train, mu_train, y_train]
         to_concat_val = [X_clustered_val, X_val, mu_val, y_val]
@@ -88,6 +95,36 @@ def load_data(generate_new_data=False):
         df_centroids_train.to_csv(TRAIN_CENTROIDS_DATA_FILEPATH, index=False)
         df_cleansed_train.to_csv(TRAIN_CLEANSED_DATA_FILEPATH, index=False)
         df_cleansed_val.to_csv(VALIDATE_CLEANSED_DATA_FILEPATH, index=False)
+
+        # k-prototyp separate x mu y from df
+        df_norm_train_kp, df_norm_val_kp = normalize_data(df_corrected_train,
+                                                          df_corrected_val,
+                                                          normalize_categorical=False)
+        assert not df_norm_train_kp.isnull().values.any(), "there's null values in df_norm_train"
+        assert not df_norm_val_kp.isnull().values.any(), "there's null values in df_norm_val"
+
+
+        X_train_kp, mu_train_kp, y_train_kp, X_val_kp, mu_val_kp, y_val_kp = \
+                separate_X_mu_y(df_norm_train_kp, df_norm_val_kp, ALL_VALUES)
+
+        # k-prototype clustering (Cao) to construct discrete states
+        print('k prototype clustering')
+        X_to_cluster_train_kp = X_train_kp.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        X_to_cluster_val_kp = X_val_kp.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        # k-prototyp separate x mu y from df
+        df_centroids_train_kp, X_clustered_train_kp, X_clustered_val_kp = \
+            clustering_kp(X_to_cluster_train_kp, X_to_cluster_val_kp, num_states=num_states)
+
+        # k-prototype stitching up
+        print('k prototype stitching up')
+        to_concat_train_kp = [X_clustered_train_kp, X_train_kp, mu_train_kp, y_train_kp]
+        to_concat_val_kp = [X_clustered_val_kp, X_val_kp, mu_val_kp, y_val_kp]
+
+        df_cleansed_train_kp = pd.concat(to_concat_train_kp, axis=1)
+        df_cleansed_val_kp = pd.concat(to_concat_val_kp, axis=1)
+        df_centroids_train_kp.to_csv(TRAIN_CENTROIDS_KP_DATA_FILEPATH, index=False)
+        df_cleansed_train_kp.to_csv(TRAIN_CLEANSED_KP_DATA_FILEPATH, index=False)
+        df_cleansed_val_kp.to_csv(VALIDATE_CLEANSED_KP_DATA_FILEPATH, index=False)
 
         # PCA
         print('applying pca')
@@ -125,23 +162,38 @@ def load_data(generate_new_data=False):
     assert not df_cleansed_pca_train.isnull().values.any(), "there's null values in df_cleansed_pca_train"
     assert not df_cleansed_pca_val.isnull().values.any(), "there's null values in df_cleansed_pca_val"
     assert not df_centroids_pca_train.isnull().values.any(), "there's null values in df_centroids_pca_train"
+
+
+    assert not df_cleansed_train_kp.isnull().values.any(), "there's null values in df_cleansed_train_kp"
+    assert not df_cleansed_val_kp.isnull().values.any(), "there's null values in df_cleansed_val_kp"
+    assert not df_centroids_train_kp.isnull().values.any(), "there's null values in df_centroids_train_kp"
     # we don't load full data
     # if need be, it's easy to add them
     df_full = pd.concat([df_cleansed_train, df_cleansed_val], axis=0, ignore_index=True)
+    df_full_kp = pd.concat([df_cleansed_train_kp, df_cleansed_val_kp], axis=0, ignore_index=True)
     df_pca_full = pd.concat([df_cleansed_pca_train, df_cleansed_pca_val], axis=0, ignore_index=True)
     data = {
-        'original': {
+        'kmeans': {
             'train': df_cleansed_train,
             'val' : df_cleansed_val,
             'centroids': df_centroids_train,
             'full': df_full
            },
-        'pca': {
+        'kprototype': {
+            'train': df_cleansed_train_kp,
+            'val' : df_cleansed_val_kp,
+            'centroids': df_centroids_train_kp,
+            'full': df_full_kp
+        },
+        'kmeans_pca': {
             'train': df_cleansed_pca_train,
             'val' : df_cleansed_pca_val,
             'centroids': df_centroids_pca_train,
             'full': df_pca_full
-            }
+        },
+        'kprototype_pca': {
+            # @todo
+        }
     }
 
     return data
@@ -166,6 +218,7 @@ def initialize_save_data_folder():
     return save_path
 
 def extract_trajectories(df, num_states, trajectory_filepath, action_column='action'):
+    # check if df for binary variables are okay
     if os.path.isfile(trajectory_filepath):
         trajectories = np.load(trajectory_filepath)
     else:
@@ -216,15 +269,23 @@ def _extract_trajectories(df, num_states, action_column):
 
     return trajectories.as_matrix()
 
-def normalize_data(df_train, df_val):
+def normalize_data(df_train, df_val, normalize_categorical=True):
     # divide cols: numerical, categorical, text data
     # logarithimic scale
-    norm_means_train = np.mean(df_train[COLS_TO_BE_NORMALIZED], axis=0)
-    norm_stds_train = np.std(df_train[COLS_TO_BE_NORMALIZED], axis=0)
-    df_train[COLS_TO_BE_NORMALIZED] -= norm_means_train
-    df_train[COLS_TO_BE_NORMALIZED] /= norm_stds_train
-    df_val[COLS_TO_BE_NORMALIZED] -= norm_means_train
-    df_val[COLS_TO_BE_NORMALIZED] /= norm_stds_train
+    df_train = df_train.copy()
+    df_val = df_val.copy()
+    if normalize_categorical:
+        cols = COLS_TO_BE_NORMALIZED_PLUS
+    else:
+        # exclude from above gender readmission
+        # elixhauser', 'SOFA', 'SIRS', 'GCS', 'Shock_Index
+        cols = COLS_TO_BE_NORMALIZED
+    norm_means_train = np.mean(df_train[cols], axis=0)
+    norm_stds_train = np.std(df_train[cols], axis=0)
+    df_train[cols] -= norm_means_train
+    df_train[cols] /= norm_stds_train
+    df_val[cols] -= norm_means_train
+    df_val[cols] /= norm_stds_train
     return df_train, df_val
 
 def correct_data(df_train, df_val):
@@ -388,10 +449,13 @@ def inverse_pca(df, n_components=None):
     X = p.fit_transform(df)
     return p.inverse_transform(X)
 
+def clustering(X_train, X_val, k=750, batch_size=300, minibatch=True):
+    if minibatch:
+        # pick only numerical columns that make sense
+        mbk = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, init_size=k*3)
+    else:
+        mbk = KMeans(n_clusters=k, random_state=0, n_jobs=7)
 
-def clustering(X_train, X_val, k=2000, batch_size=100):
-    # pick only numerical columns that make sense
-    mbk = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, init_size=k*3)
     # fit only on train
     mbk.fit(X_train)
     X_centroids_train = mbk.cluster_centers_
@@ -399,6 +463,40 @@ def clustering(X_train, X_val, k=2000, batch_size=100):
 
     X_clustered_train = pd.Series(mbk.predict(X_train), name='state')
     X_clustered_val = pd.Series(mbk.predict(X_val), name='state')
+    return df_centroids_train, X_clustered_train, X_clustered_val
+
+def clustering_kp(X_train, X_val, num_states, init_method='Cao'):
+    # @refactor
+    # preprocessing to keep things orderly for kp method
+
+    cat_cols = PSEUDO_OBSERVATIONS + ['elixhauser', 'SOFA', 'SIRS', 'gender', 're_admission']
+    cols = X_train.columns.tolist()
+    num_cols = list(set(cols) - set(cat_cols))
+    # change the order
+    X_train = X_train[num_cols + cat_cols]
+    X_train[cat_cols] = X_train[cat_cols].astype(int)
+    # number of data points
+    N = len(X_train.index)
+    # number of clusters
+    K = num_states
+    # num of features
+    M = len(X_train.columns.tolist())
+    # num of cat features
+    MN = len(cat_cols)
+    # init_method cao or huang
+    kp = KPrototypes(n_clusters=K, max_iter=200, init=init_method, verbose=2)
+    # fit only on train
+    kp.fit(X_train, categorical=list(range(M - MN, M)))
+    # @todo check if it's decoded version to use
+    X_centroids_train = kp.cluster_centroids_[0]
+    df_centroids_train = pd.DataFrame(X_centroids_train, columns=X_train.columns)
+
+    clusters_train = kp.predict(X_train, categorical=list(range(M - MN, M)))
+    clusters_val= kp.predict(X_val, categorical=list(range(M - MN, M)))
+    X_clustered_train = pd.Series(clusters_train, name='state')
+    X_clustered_val = pd.Series(clusters_val, name='state')
+    import pdb;pdb.set_trace()
+
     return df_centroids_train, X_clustered_train, X_clustered_val
 
 def get_action_discretization_rules(

@@ -37,6 +37,23 @@ TRAJECTORIES_PCA_IV_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_pca_iv_sd_righ
 TRANSITION_MATRIX_PCA_FILEPATH = DATA_PATH + 'transition_matrix_pca.npy'
 # PCA ends
 
+# K prototype starts
+TRAIN_CLEANSED_KP_DATA_FILEPATH = DATA_PATH + 'cleansed_data_kp_train.csv'
+TRAIN_CENTROIDS_KP_DATA_FILEPATH = DATA_PATH + 'centroids_data_kp_train.csv'
+VALIDATE_CLEANSED_KP_DATA_FILEPATH = DATA_PATH + 'cleansed_data_kp_val.csv'
+TRAIN_TRAJECTORIES_KP_FILEPATH = DATA_PATH + 'trajectories_kp_train.npy'
+TRAIN_TRANSITION_MATRIX_KP_FILEPATH = DATA_PATH + 'transition_kp_matrix_train.npy'
+TRAJECTORIES_KP_FILEPATH = DATA_PATH + 'trajectories_kp.npy'
+TRAJECTORIES_KP_VASO_FILEPATH = DATA_PATH + 'trajectories_kp_vaso.npy'
+TRAJECTORIES_KP_VASO_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_kp_vaso_sd_left.npy'
+TRAJECTORIES_KP_VASO_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_kp_vaso_sd_right.npy'
+TRAJECTORIES_KP_IV_FILEPATH = DATA_PATH + 'trajectories_kp_iv.npy'
+TRAJECTORIES_KP_IV_SD_LEFT_FILEPATH = DATA_PATH + 'trajectories_jp_iv_sd_left.npy'
+TRAJECTORIES_KP_IV_SD_RIGHT_FILEPATH = DATA_PATH + 'trajectories_kp_iv_sd_right.npy'
+TRANSITION_MATRIX_KP_FILEPATH = DATA_PATH + 'transition_matrix_kp.npy'
+# K prototype ends
+
+
 VALIDATE_FILEPATH = DATA_PATH + 'Sepsis_imp_test.csv'
 VALIDATE_CLEANSED_DATA_FILEPATH = DATA_PATH + 'cleansed_data_val.csv'
 # we don't use this for now
@@ -119,7 +136,8 @@ CATEGORICAL_NOMINAL = ['icustayid', 'gender', 're_admission'] + OUTCOMES
 # TODO: this does not make sense but will fix later
 # when we do clustering other than kmeans
 ETC = ['age', 'charttime']
-COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
+COLS_TO_BE_NORMALIZED = EXT_MEASUREMENTS + BLOOD_SAMPLES + ['age', 'cumulated_balance_tev'] + ['Shock_Index', 'GCS']
+COLS_TO_BE_NORMALIZED_PLUS = EXT_MEASUREMENTS + BLOOD_SAMPLES + PSEUDO_OBSERVATIONS + SUMMARY_INDEX + ['age', 'gender', 're_admission', 'cumulated_balance_tev']
 # NEW UPDATE TO MAKE IT COMPATIBLE WITH PHI(S)
 #BINARY_COLS = ['gender', 're_admission', 'sedation', 'mechvent', 'rrt', 'died_in_hosp', 'mortality_90d']
 #COLS_TO_BE_NORMALIZED = list(set(COLS_TO_BE_NORMALIZED) - set(BINARY_COLS))

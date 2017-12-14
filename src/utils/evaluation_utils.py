@@ -96,7 +96,7 @@ def test_code():
 def sumzip(*items):
     return [sum(values) for values in zip(*items)]
 
-def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test = True):
+def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, pi_name = 'IRL', show = True, test = True):
     KL_IRL = []
     KL_random = []
     KL_vaso_random = []
@@ -113,7 +113,16 @@ def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test =
     fig = plt.figure(figsize=(10, 10))
     data = np.transpose(np.matrix([KL_IRL, KL_random, KL_no_int, KL_vaso_random, KL_iv_random]))
     data_KL = pd.DataFrame(data)
-    data_KL.columns = ["IRL", "Random", "No_Intervention", "Vaso Only Random", "IV Only Random"]
+    data_KL.columns = [pi_name, "Random", "No_Intervention", "Vaso Only Random", "IV Only Random"]
+
+    columns = [None]*5
+    d = np.argsort(data_KL.mean().tolist())
+    columns[d[0]] = pi_name
+    columns[d[1]] = 'No_intervention'
+    columns[d[2]] = 'Vaso_only_random'
+    columns[d[3]] = 'Random'
+    columns[d[4]] = 'IV_only_random'
+    data_KL.columns = columns
     sns.barplot(data=data_KL, estimator=mean)
 
     #plt.bar(keys,KL_IRL,color = 'b',label="IRL")
@@ -137,7 +146,7 @@ def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test =
     plt.close()
 
 
-def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, test = True):
+def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, pi_name='IRL', show = True, test = True):
     keys = list(LL.keys())
     key_len = len(keys)
 
@@ -154,7 +163,7 @@ def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, te
     data_NLL = pd.DataFrame(np.transpose(np.matrix([NLL_IRL,NLL_random,NLL_no_int])))
     columns = [None]*3
     d = np.argsort(data_NLL.mean().tolist())
-    columns[d[0]] = 'IRL'
+    columns[d[0]] = pi_name
     columns[d[1]] = 'No_intervention'
     columns[d[2]] = 'Random'
     data_NLL.columns = columns

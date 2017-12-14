@@ -28,6 +28,8 @@ class ExperimentManager():
         self.svm_penalty = args.svm_penalty
         self.svm_epsilon = args.svm_epsilon
         self.use_pca = args.use_pca
+        self.clustering_method = args.clustering_method
+        self.num_states = args.num_states
         self.generate_new_data = args.generate_new_data
         self.num_bins = args.num_bins
         self.verbose = args.verbose
@@ -44,8 +46,16 @@ class ExperimentManager():
             print('')
 
         # loading data
-        self.data = load_data(generate_new_data=self.generate_new_data)
-        df_label = 'pca' if self.use_pca else 'original'
+        self.data = load_data(generate_new_data=self.generate_new_data,
+                              num_states=self.num_states)
+        import pdb;pdb.set_trace()
+        df_label = ''
+        if self.clustering_method == 'km':
+            df_label += 'kmeans'
+        else:
+            df_label += 'kprototype'
+        if self.use_pca:
+            df_label += '_pca'
         self.df_train = self.data[df_label]['train']
         self.df_val = self.data[df_label]['val']
         self.df_centroids = self.data[df_label]['centroids']
@@ -77,21 +87,43 @@ class ExperimentManager():
         self.reward_matrix = reward_matrix
 
         # 2. build transition_matrix using full data
-        t_path = TRAJECTORIES_PCA_FILEPATH if self.use_pca else TRAJECTORIES_FILEPATH
-        tm_path = TRANSITION_MATRIX_PCA_FILEPATH if self.use_pca else TRANSITION_MATRIX_FILEPATH
-        t_train_path = TRAIN_TRAJECTORIES_PCA_FILEPATH if self.use_pca else TRAIN_TRAJECTORIES_FILEPATH
-        tm_train_path = TRAIN_TRANSITION_MATRIX_PCA_FILEPATH if self.use_pca else TRAIN_TRANSITION_MATRIX_FILEPATH
+        if self.clustering_method == 'km' and self.use_pca:
+            self.t_path = TRAJECTORIES_PCA_FILEPATH
+            self.tm_path = TRANSITION_MATRIX_PCA_FILEPATH
+            self.t_train_path = TRAIN_TRAJECTORIES_PCA_FILEPATH
+            self.tm_train_path = TRAIN_TRANSITION_MATRIX_PCA_FILEPATH
+            self.self.path_vaso = TRAJECTORIES_PCA_VASO_FILEPATH
+            self.self.path_iv = TRAJECTORIES_PCA_IV_FILEPATH
 
-        trajectories = extract_trajectories(self.df, NUM_PURE_STATES, t_path)
+        elif self.clustering_method == 'km' and not self.use_pca:
+            self.t_path = TRAJECTORIES_FILEPATH
+            self.tm_path = TRANSITION_MATRIX_FILEPATH
+            self.t_train_path = TRAIN_TRAJECTORIES_FILEPATH
+            self.tm_train_path = TRAIN_TRANSITION_MATRIX_FILEPATH
+            self.path_vaso = TRAJECTORIES_VASO_FILEPATH
+            self.path_iv = TRAJECTORIES_IV_FILEPATH
+
+        elif self.clustering_method == 'kp' and self.use_pca:
+            pass
+        elif self.clustering_method == 'kp' and not self.use_pca:
+            self.t_path = TRAJECTORIES_KP_FILEPATH
+            self.tm_path = TRANSITION_MATRIX_KP_FILEPATH
+            self.t_train_path = TRAIN_TRAJECTORIES_KP_FILEPATH
+            self.tm_train_path = TRAIN_TRANSITION_MATRIX_KP_FILEPATH
+            self.path_vaso = TRAJECTORIES_VASO_KP_FILEPATH
+            self.path_iv = TRAJECTORIES_IV_KP_FILEPATH
+        else:
+            raise Exception('unsupported combination')
+        trajectories = extract_trajectories(self.df, NUM_PURE_STATES, self.t_path)
         transition_matrix, _ = \
-                make_mdp(trajectories, NUM_STATES, NUM_ACTIONS, tm_path, REWARD_MATRIX_FILEPATH)
+                make_mdp(trajectories, NUM_STATES, NUM_ACTIONS, self.tm_path, REWARD_MATRIX_FILEPATH)
         assert np.isclose(np.sum(transition_matrix), NUM_STATES * NUM_ACTIONS), 'something wrong with \ test transition_matrix'
         self.transition_matrix = transition_matrix
 
         # 3. build transition_matrix using only training data
-        trajectories_train = extract_trajectories(self.df_train, NUM_PURE_STATES, t_train_path)
+        trajectories_train = extract_trajectories(self.df_train, NUM_PURE_STATES, self.t_train_path)
         transition_matrix_train, _ = \
-                make_mdp(trajectories_train, NUM_STATES, NUM_ACTIONS, tm_train_path, TRAIN_REWARD_MATRIX_FILEPATH)
+                make_mdp(trajectories_train, NUM_STATES, NUM_ACTIONS, self.tm_train_path, TRAIN_REWARD_MATRIX_FILEPATH)
         assert np.isclose(np.sum(transition_matrix), NUM_STATES * NUM_ACTIONS), 'something wrong with \
              train transition_matrix'
         self.transition_matrix_train = transition_matrix_train
@@ -136,7 +168,7 @@ class ExperimentManager():
         self.pi_mdp_vaso_probs, self.pi_mdp_iv_probs = \
             self._decompose_mdp_action_probs(self.df, self.pi_expert_mdp_s)
 
-
+        self.ll_kl_mdp_plotted = False
 
     def save_experiment(self, res, exp):
         save_Q(res['approx_expert_Q'],
@@ -245,20 +277,47 @@ class ExperimentManager():
                        show=False,
                        iter_num=exp.num_iterations,
                        trial_num=exp.num_trials)
+            # @hack
+            if not self.ll_kl_mdp_plotted:
+                LL_mdp = lh.get_log_likelihood(df,
+                                           pi_irl_s,
+                                           self.pi_expert_phy_g,
+                                           self.pi_expert_phy_s,
+                                           num_states = NUM_PURE_STATES,
+                                           num_actions = NUM_ACTIONS,
+                                           restrict_num = True,
+                                           avg = True)
+
+                KL_mdp = lh.get_KL_divergence(self.pi_expert_phy_s, self.pi_expert_mdp_s)
+                plot_KL(KL_mdp,
+                       plot_suffix=exp.experiment_id + '_mdp',
+                       save_path=self.img_path,
+                       show=False,
+                       iter_num=exp.num_iterations,
+                       trial_num=exp.num_trials,
+                       pi_name = 'MDP')
+
+                plot_avg_LL(LL_mdp,
+                           plot_suffix=exp.experiment_id + '_mdp',
+                           save_path=self.img_path,
+                           show=False,
+                           iter_num=exp.num_iterations,
+                           trial_num=exp.num_trials,
+                           pi_name = 'MDP')
+                self.ll_kl_mdp_plotted = True
 
     def _decompose_phy_action(self, df):
 
-        path_vaso = TRAJECTORIES_PCA_VASO_FILEPATH if self.use_pca else TRAJECTORIES_VASO_FILEPATH
         #path_vaso_sd_l = TRAJECTORIES_PCA_VASO_SD_LEFT_FILEPATH if self.use_pca else TRAJECTORIES_VASO_SD_LEFT_FILEPATH
         #path_vaso_sd_r = TRAJECTORIES_PCA_VASO_SD_RIGHT_FILEPATH if self.use_pca else TRAJECTORIES_VASO_SD_RIGHT_FILEPATH
-        path_iv = TRAJECTORIES_PCA_IV_FILEPATH if self.use_pca else TRAJECTORIES_IV_FILEPATH
+
         #path_iv_sd_l = TRAJECTORIES_PCA_IV_SD_LEFT_FILEPATH if self.use_pca else TRAJECTORIES_IV_SD_LEFT_FILEPATH
         #path_iv_sd_r = TRAJECTORIES_PCA_IV_SD_RIGHT_FILEPATH if self.use_pca else TRAJECTORIES_IV_SD_RIGHT_FILEPATH
 
-        traj_vaso = extract_trajectories(self.df, NUM_PURE_STATES, path_vaso, 'action_vaso')
+        traj_vaso = extract_trajectories(self.df, NUM_PURE_STATES, self.path_vaso, 'action_vaso')
         #traj_vaso_sd_l = extract_trajectories(self.df, NUM_PURE_STATES, path_vaso_sd_l, 'action_vaso_sd_left')
         #traj_vaso_sd_r = extract_trajectories(self.df, NUM_PURE_STATES, path_vaso_sd_r, 'action_vaso_sd_right')
-        traj_iv = extract_trajectories(self.df, NUM_PURE_STATES, path_iv, 'action_iv')
+        traj_iv = extract_trajectories(self.df, NUM_PURE_STATES, self.path_iv, 'action_iv')
         #traj_iv_sd_l = extract_trajectories(self.df, NUM_PURE_STATES, path_iv_sd_l, 'action_iv_sd_left')
         #traj_iv_sd_r = extract_trajectories(self.df, NUM_PURE_STATES, path_iv_sd_r, 'action_iv_sd_right')
         num_bins = 5
@@ -312,7 +371,6 @@ class ExperimentManager():
         return irl_vaso_probs, irl_iv_probs
 
 
-        pass
     def set_experiment(self, exp):
         exp.transition_matrix_train = self.transition_matrix_train
         exp.transition_matrix = self.transition_matrix
@@ -354,7 +412,6 @@ class ExperimentManager():
 
 
     def _run_perf_vs_trajectories(self, num_exp_trajectories):
-
         pi_irl_s = StochasticPolicy(NUM_PURE_STATES,
                                     NUM_ACTIONS,
                                     res['approx_expert_Q'])
@@ -383,6 +440,7 @@ class ExperimentManager():
         res = {'v_pi_irl_gs': v_pi_irl_gs, 'v_pi_irl_ss': v_pi_irl_ss}
         cur_t = time.strftime('%y%m%d_%H%M%S', time.gmtime())
         np.save('{}perf_vs_traj_result_{}'.format(self.save_path, cur_t), res)
+
 
 class Experiment():
     def __init__(self, experiment_id,
