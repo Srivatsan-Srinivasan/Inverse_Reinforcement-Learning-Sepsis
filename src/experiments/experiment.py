@@ -131,20 +131,11 @@ class ExperimentManager():
         # experiments
         self.experiments = []
 
-        df_vaso_sd, df_iv_sd = get_sd_away_bins(self.df)
-        self.df_vaso_sd = df_vaso_sd
-        self.df_iv_sd = df_iv_sd
+        self.df_vaso_sd, self.df_iv_sd = get_sd_away_bins(self.df)
+        self.pi_phy_vaso, self.pi_phy_iv = self._decompose_phy_action(self.df)
+        self.pi_mdp_vaso_probs, self.pi_mdp_iv_probs = \
+            self._decompose_mdp_action_probs(self.df, self.pi_expert_mdp_s)
 
-
-        mdp_vaso_probs, mdp_iv_probs, irl_vaso_probs, irl_iv_probs = \
-            self._prepare_deviation_plots(self.df,
-                                          self.pi_expert_mdp_s,
-                                          pi_irl_s)
-
-        self.pi_mdp_vaso_probs = mdp_vaso_probs
-        self.pi_mdp_iv_probs = mdp_iv_probs
-        self.pi_irl_vaso_probs = irl_vaso_probs
-        self.pi_irl_iv_probs = irl_iv_probs
 
 
     def save_experiment(self, res, exp):
@@ -205,26 +196,30 @@ class ExperimentManager():
                                         NUM_ACTIONS,
                                         res['approx_expert_Q'])
 
+            pi_irl_vaso_probs, pi_irl_iv_probs =\
+                    self._decompose_irl_action_probs(self.df, pi_irl_s)
 
 
             plot_deviation_from_experts(self.df_vaso_sd,
                                         self.pi_phy_vaso,
                                         self.pi_mdp_vaso_probs,
-                                        self.pi_irl_vaso_probs,
+                                        pi_irl_vaso_probs,
                                         self.img_path,
-                                        (exp.experiment_id + '_vaso'),
+                                        exp.experiment_id,
                                         exp.num_trials,
-                                        exp.num_iterations)
+                                        exp.num_iterations,
+                                        action_name='vaso')
 
 
             plot_deviation_from_experts(self.df_iv_sd,
                                         self.pi_phy_iv,
                                         self.pi_mdp_iv_probs,
-                                        self.pi_irl_iv_probs,
+                                        pi_irl_iv_probs,
                                         self.img_path,
-                                        (exp.experiment_id + '_iv'),
+                                        exp.experiment_id,
                                         exp.num_trials,
-                                        exp.num_iterations)
+                                        exp.num_iterations,
+                                        action_name='iv')
             # kl and loglikelihood
             LL = lh.get_log_likelihood(df,
                                        pi_irl_s,
@@ -251,7 +246,8 @@ class ExperimentManager():
                        iter_num=exp.num_iterations,
                        trial_num=exp.num_trials)
 
-    def _prepare_deviation_plots(self, df, pi_mdp, pi_irl):
+    def _decompose_phy_action(self, df):
+
         path_vaso = TRAJECTORIES_PCA_VASO_FILEPATH if self.use_pca else TRAJECTORIES_VASO_FILEPATH
         #path_vaso_sd_l = TRAJECTORIES_PCA_VASO_SD_LEFT_FILEPATH if self.use_pca else TRAJECTORIES_VASO_SD_LEFT_FILEPATH
         #path_vaso_sd_r = TRAJECTORIES_PCA_VASO_SD_RIGHT_FILEPATH if self.use_pca else TRAJECTORIES_VASO_SD_RIGHT_FILEPATH
@@ -266,20 +262,21 @@ class ExperimentManager():
         #traj_iv_sd_l = extract_trajectories(self.df, NUM_PURE_STATES, path_iv_sd_l, 'action_iv_sd_left')
         #traj_iv_sd_r = extract_trajectories(self.df, NUM_PURE_STATES, path_iv_sd_r, 'action_iv_sd_right')
         num_bins = 5
-        self.pi_phy_vaso = get_physician_policy(traj_vaso, num_actions=num_bins, is_stochastic=True)
+        pi_phy_vaso = get_physician_policy(traj_vaso, num_actions=num_bins, is_stochastic=True)
         #self.pi_phy_vaso_sd_l = get_physician_policy(traj_vaso_sd_l, num_actions=num_bins, is_stochastic=True)
         #self.pi_phy_vaso_sd_r = get_physician_policy(traj_vaso_sd_r, num_actions=num_bins, is_stochastic=True)
-        self.pi_phy_iv = get_physician_policy(traj_iv, num_actions=num_bins, is_stochastic=True)
+        pi_phy_iv = get_physician_policy(traj_iv, num_actions=num_bins, is_stochastic=True)
         #self.pi_phy_iv_sd_l = get_physician_policy(traj_iv_sd_l, num_actions=num_bins, is_stochastic=True)
         #self.pi_phy_iv_sd_r = get_physician_policy(traj_iv_sd_r, num_actions=num_bins, is_stochastic=True)
+        return pi_phy_vaso, pi_phy_iv
 
+    def _decompose_mdp_action_probs(self, df, pi_mdp):
         num_bins = 5
         mdp_probs = pi_mdp.query_Q_probs()
         mdp_vaso_probs = np.zeros((NUM_PURE_STATES, num_bins))
         mdp_iv_probs = np.zeros((NUM_PURE_STATES, num_bins))
-        irl_probs = pi_irl.query_Q_probs()
-        irl_vaso_probs = np.zeros((NUM_PURE_STATES, num_bins))
-        irl_iv_probs = np.zeros((NUM_PURE_STATES, num_bins))
+
+
         vaso_bins = np.arange(25) // num_bins
         iv_bins = np.arange(25) % num_bins
 
@@ -287,17 +284,35 @@ class ExperimentManager():
             # marginalize out iv and vaso
             mdp_vaso_probs[:, bin_i] = np.sum(mdp_probs[:, np.flatnonzero(vaso_bins == bin_i)], axis=1)
             mdp_iv_probs[:, bin_i] = np.sum(mdp_probs[:, np.flatnonzero(iv_bins == bin_i)], axis=1)
-            irl_vaso_probs[:, bin_i] = np.sum(irl_probs[:, np.flatnonzero(vaso_bins == bin_i)], axis=1)
-            irl_iv_probs[:, bin_i] = np.sum(irl_probs[:, np.flatnonzero(iv_bins == bin_i)], axis=1)
 
         assert np.isclose(np.sum(mdp_vaso_probs), NUM_PURE_STATES)
         assert np.isclose(np.sum(mdp_iv_probs), NUM_PURE_STATES)
+
+        return mdp_vaso_probs, mdp_iv_probs
+
+
+    def _decompose_irl_action_probs(self, df, pi_irl):
+        num_bins = 5
+
+        irl_probs = pi_irl.query_Q_probs()
+        irl_vaso_probs = np.zeros((NUM_PURE_STATES, num_bins))
+        irl_iv_probs = np.zeros((NUM_PURE_STATES, num_bins))
+
+        vaso_bins = np.arange(25) // num_bins
+        iv_bins = np.arange(25) % num_bins
+
+        for bin_i in range(num_bins):
+            # marginalize out iv and vaso
+            irl_vaso_probs[:, bin_i] = np.sum(irl_probs[:, np.flatnonzero(vaso_bins == bin_i)], axis=1)
+            irl_iv_probs[:, bin_i] = np.sum(irl_probs[:, np.flatnonzero(iv_bins == bin_i)], axis=1)
+
         assert np.isclose(np.sum(irl_vaso_probs), NUM_PURE_STATES)
         assert np.isclose(np.sum(irl_iv_probs), NUM_PURE_STATES)
 
-        return mdp_vaso_probs, mdp_iv_probs, irl_vaso_probs, irl_iv_probs
+        return irl_vaso_probs, irl_iv_probs
 
 
+        pass
     def set_experiment(self, exp):
         exp.transition_matrix_train = self.transition_matrix_train
         exp.transition_matrix = self.transition_matrix

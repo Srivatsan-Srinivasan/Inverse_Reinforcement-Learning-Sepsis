@@ -112,7 +112,8 @@ def plot_deviation_from_experts(sd,
                                 save_path,
                                 plot_prefix,
                                 num_trials,
-                                num_iterations):
+                                num_iterations,
+                                action_name):
     '''
     compare clinician, mdp
     compare clinician, irl
@@ -120,7 +121,7 @@ def plot_deviation_from_experts(sd,
     # hyperparameters
     # some preprocessing, cap bin jump by one bin only
     # e.g. for iv, std is too high, it often jumps by two bins
-    thresholds = np.array([0.05, 0.15, 0.25])
+    thresholds = np.array([0.10, 0.20, 0.30])
     pi_phy_probs = pi_phy.query_Q_probs()
     violations = np.zeros((2, len(thresholds), NUM_PURE_STATES))
     num_bins = 5
@@ -147,13 +148,13 @@ def plot_deviation_from_experts(sd,
     colors = [['firebrick', 'red', 'darksalmon'], ['blue', 'royalblue', 'navy']]
     for i, _ in enumerate([pi_mdp_probs, pi_irl_probs]):
         for j, th in enumerate(thresholds):
-            plt.plot(violations[i, j, :], linestyle=linestyles[i], c=colors[i][j], label='{}, threshold={}%'.format(desc[i], 100 * th))
-    quartiles = np.arange(5)/4.0
+            plt.plot(violations[i, j, :], linestyle=linestyles[i], c=colors[i][j], label='{}_{} (> {}%)'.format(action_name, desc[i], int(100 * th)))
+    quartiles = np.arange(5, dtype=np.int)/4
     plt.xticks(np.around(750 * quartiles), 100 * quartiles)
     plt.legend(loc='best')
     plt.xlabel('State Quantiles (%)', size=FONT_SIZE)
     plt.ylabel('Proportion of Violations (%)', size=FONT_SIZE)
-    fig.savefig('{}{}_violations_t{}xi{}'.format(save_path, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
+    fig.savefig('{}{}_{}_violations_t{}xi{}'.format(save_path, action_name, plot_prefix, num_trials, num_iterations), ppi=300, bbox_inches='tight')
     plt.close()
 
 #def plot_deviation_from_experts(pi_phy,

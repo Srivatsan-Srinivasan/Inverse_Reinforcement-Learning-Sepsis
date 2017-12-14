@@ -109,18 +109,21 @@ def plot_KL(KL, save_path, plot_suffix, trial_num, iter_num, show = True, test =
         KL_no_int.append(KL[state]["no_int_policy"])
         KL_vaso_random.append(KL[state]["vaso_only_random"])
         KL_iv_random.append(KL[state]["iv_only_random"])
+
     fig = plt.figure(figsize=(10, 10))
-    #data_NLL = pd.DataFrame(np.transpose(np.matrix([KL_IRL,NLL_random,NLL_no_int])))
-    #data_NLL.columns = ["IRL", "Random", "No_Intervention", "Vaso Only Random", "IV Only Random"]
-    #sns.barplot(data=data_NLL, estimator=mean)
-    plt.bar(keys,KL_IRL,color = 'b',label="IRL")
-    plt.bar(keys,KL_random,bottom = sumzip(KL_IRL), color = 'r', label = "Random")
-    plt.bar(keys,KL_no_int,bottom = sumzip(KL_IRL,KL_random), color = 'y', label = "No intervnetion")
-    plt.bar(keys,KL_vaso_random, bottom = sumzip(KL_IRL,KL_random,KL_no_int), color = 'g', label = "Vaso Only Random")
-    plt.bar(keys,KL_iv_random, bottom = sumzip(KL_IRL,KL_random,KL_no_int,KL_vaso_random), color = 'm', label = "IV Only Random" )
-    test_str = "train"
-    if test:
-        test_str = "test"
+    data = np.transpose(np.matrix([KL_IRL, KL_random, KL_no_int, KL_vaso_random, KL_iv_random]))
+    data_KL = pd.DataFrame(data)
+    data_KL.columns = ["IRL", "Random", "No_Intervention", "Vaso Only Random", "IV Only Random"]
+    sns.barplot(data=data_KL, estimator=mean)
+
+    #plt.bar(keys,KL_IRL,color = 'b',label="IRL")
+    #plt.bar(keys,KL_random,bottom = sumzip(KL_IRL), color = 'r', label = "Random")
+    #plt.bar(keys,KL_no_int,bottom = sumzip(KL_IRL,KL_random), color = 'y', label = "No intervnetion")
+    #plt.bar(keys,KL_vaso_random, bottom = sumzip(KL_IRL,KL_random,KL_no_int), color = 'g', label = "Vaso Only Random")
+    #plt.bar(keys,KL_iv_random, bottom = sumzip(KL_IRL,KL_random,KL_no_int,KL_vaso_random), color = 'm', label = "IV Only Random" )
+    #test_str = "train"
+    #if test:
+    #    test_str = "test"
     #plt.title("KL divergences with respect to physician policy in " + test_str + " data" )
     #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
     plt.legend(loc='best', fontsize=FONT_SIZE)
@@ -149,10 +152,16 @@ def plot_avg_LL(LL, save_path, plot_suffix, trial_num, iter_num, show = True, te
 
     fig = plt.figure(figsize=(10, 10))
     data_NLL = pd.DataFrame(np.transpose(np.matrix([NLL_IRL,NLL_random,NLL_no_int])))
-    data_NLL.columns = ["IRL", "Random", "No_Intervention"]
+    columns = [None]*3
+    d = np.argsort(data_NLL.mean().tolist())
+    columns[d[0]] = 'IRL'
+    columns[d[1]] = 'No_intervention'
+    columns[d[2]] = 'Random'
+    data_NLL.columns = columns
+    # @refactor @hack
     sns.barplot(data=data_NLL, estimator=mean)
     plt.xlabel('Policies', fontsize=FONT_SIZE)
-    plt.ylabel('Log Likelihood', fontsize=FONT_SIZE)
+    plt.ylabel('Negative Log Likelihood', fontsize=FONT_SIZE)
     #plot.title("Plot showing average negative LL")
     if show:
         plt.show()

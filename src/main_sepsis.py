@@ -35,30 +35,30 @@ if __name__ == '__main__':
     em = ExperimentManager(args)
 
     cur_t = time.strftime('%y%m%d_%H%M%S', time.gmtime())
-    exp1 = Experiment(
-        experiment_id =  cur_t + '_' + 'irl_greedy_physician_greedy',
-        policy_expert = em.pi_expert_phy_g,
-        save_file_name = cur_t + '_' + IRL_GREEDY_PHYSICIAN_Q_GREEDY ,
-        irl_use_stochastic_policy=False
-    )
-    em.set_experiment(exp1)
-
-    exp2 = Experiment(
-        experiment_id = cur_t + '_' + 'irl_greedy_physician_stochastic',
-        policy_expert = em.pi_expert_phy_s,
-        save_file_name = cur_t + '_' +  IRL_GREEDY_PHYSICIAN_Q_STOCHASTIC,
-        irl_use_stochastic_policy=False
-    )
-    em.set_experiment(exp2)
-
-    exp3 = Experiment(
-        experiment_id = cur_t + '_' + 'irl_greedy_mdp_greedy',
-        policy_expert = em.pi_expert_mdp_g,
-        save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_GREEDY,
-        irl_use_stochastic_policy=False
-    )
-    em.set_experiment(exp3)
-
+#    exp1 = Experiment(
+#        experiment_id =  cur_t + '_' + 'irl_greedy_physician_greedy',
+#        policy_expert = em.pi_expert_phy_g,
+#        save_file_name = cur_t + '_' + IRL_GREEDY_PHYSICIAN_Q_GREEDY ,
+#        irl_use_stochastic_policy=False
+#    )
+#    em.set_experiment(exp1)
+#
+#    exp2 = Experiment(
+#        experiment_id = cur_t + '_' + 'irl_greedy_physician_stochastic',
+#        policy_expert = em.pi_expert_phy_s,
+#        save_file_name = cur_t + '_' +  IRL_GREEDY_PHYSICIAN_Q_STOCHASTIC,
+#        irl_use_stochastic_policy=False
+#    )
+#    em.set_experiment(exp2)
+#
+#    exp3 = Experiment(
+#        experiment_id = cur_t + '_' + 'irl_greedy_mdp_greedy',
+#        policy_expert = em.pi_expert_mdp_g,
+#        save_file_name = cur_t + '_' + IRL_GREEDY_MDP_Q_GREEDY,
+#        irl_use_stochastic_policy=False
+#    )
+#    em.set_experiment(exp3)
+#
     #exp4 = Experiment(
     #    experiment_id = cur_t + '_' + 'irl_greedy_mdp_stochatic',
     #    policy_expert = em.pi_expert_mdp_s,
