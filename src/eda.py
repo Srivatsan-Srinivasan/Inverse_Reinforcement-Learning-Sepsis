@@ -2,12 +2,32 @@ import os
 from string import ascii_letters
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
 from utils.utils import load_data
 from constants import *
 from policy.policy import GreedyPolicy, StochasticPolicy
 
+def physician_action_consistency_in_two_datasets(df_train, df_val, img_path, plot_suffix, FONT_SIZE):
+    train_action_dist = df_train.groupby(['state'])['action'].apply(lambda x : x.value_counts().index[0])
+    df_all = pd.concat([df_train[['state', 'action']], df_val[['state', 'action']]])
+    all_action_dist = df_all.groupby(['state'])['action'].apply(lambda x : x.value_counts().index[0])
+    
+    same_mode = sum(train_action_dist.values == all_action_dist.values)
+    diff_mode = sum(train_action_dist.values != all_action_dist.values)
 
-def controversial_states(df, img_path):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    objects = ('Consistent', 'Inconsistent')
+    y_pos = np.arange(len(objects))
+    performance = [same_mode, diff_mode]
+
+    plt.bar(y_pos, performance, align='center')
+    plt.xticks(y_pos, objects, fontsize = FONT_SIZE)
+    plt.ylabel('Number of states', fontsize = FONT_SIZE)
+    plt.title('Physician mode action in \n train vs train+val', fontsize = FONT_SIZE)
+ 
+    fig.savefig('{}{}'.format(img_path, plot_suffix), ppi=300)
+
+def controversial_states(df, img_path, plot_suffix, FONT_SIZE):
 	df_mod = df[['state','action']]
 	df_mod['iv_action'] = df_mod['action'] % 5
 	df_mod['vaso_action'] = df_mod['action'] // 5
@@ -15,18 +35,27 @@ def controversial_states(df, img_path):
 	# Number of unique actions across states
 	df_unique = df_mod.groupby(['state']).nunique()
 
-	plt.hist(df_unique['iv_action'])
-	plt.title("Histogram of unique IV actions across states", size = 16)
-	plt.xlabel("Number of unique IV actions", size = 16)
-	plt.ylabel("Number of States", size =16)
+	fig = plt.figure(figsize = (25, 10))
+	ax1 = fig.add_subplot(121)
+	ax1.hist(df_unique['iv_action'].astype(int))
+	ax1.set_title("Unique IV actions across states", fontsize = FONT_SIZE)
+	ax1.set_xlabel("Number of unique IV actions", fontsize = FONT_SIZE)
+	ax1.set_ylabel("Number of States", fontsize = FONT_SIZE)
 	# plt.show()
 
-	plt.hist(df_unique['vaso_action'])
-	plt.title("Histogram of unique vaso actions across states", size = 16)
-	plt.xlabel("Number of unique vaso actions", size = 16)
-	plt.ylabel("Number of States", size =16)
+	ax2 = fig.add_subplot(122)
+	ax2.hist(df_unique['vaso_action'].astype(int))
+	ax2.set_title("Unique vaso actions across states", fontsize = FONT_SIZE)
+	ax2.set_xlabel("Number of unique vaso actions", fontsize = FONT_SIZE)
+	ax2.set_ylabel("Number of States", fontsize = FONT_SIZE)
 	# plt.show()
 	
+	fig.savefig('{}{}'.format(img_path, plot_suffix), ppi=300)
+
+def action_variance(df, img_path, plot_suffix, FONT_SIZE):
+	df_mod = df[['state','action']]
+	df_mod['iv_action'] = df_mod['action'] % 5
+	df_mod['vaso_action'] = df_mod['action'] // 5
 	# action variance across states
 	df_var = df_mod.groupby(['state']).std()
 	df_count = df_mod.groupby(['state']).count()
@@ -34,23 +63,27 @@ def controversial_states(df, img_path):
 	iv_stderr = np.array(df_var['iv_action']/np.sqrt(df_count['iv_action']))
 	vaso_stderr = np.array(df_var['vaso_action']/np.sqrt(df_count['vaso_action']))
 
-	plt.hist(all_action_stderr,bins = 20)
-	plt.title("Histogram of action std err across states", size = 16)
-	plt.xlabel("Standard error of 25 action bins", size = 16)
-	plt.ylabel("Number of States", size =16)
-	# plt.show()
+	fig = plt.figure(figsize = (40, 10))
+	ax1 = fig.add_subplot(131)
 
-	plt.hist(vaso_stderr,bins = 20)
-	plt.title("Histogram of vaso bin std err across states", size = 16)
-	plt.xlabel("Standard error of vaso bin", size = 16)
-	plt.ylabel("Number of States", size =16)
-	# plt.show()
+	ax1.hist(all_action_stderr, bins = 20)
+	ax1.set_title("Standard error of \n 25 actions", fontsize = FONT_SIZE)
+	ax1.set_xlabel("Standard error of action", fontsize = FONT_SIZE)
+	ax1.set_ylabel("Number of States", fontsize = FONT_SIZE)
 
-	plt.hist(iv_stderr,bins = 20)
-	plt.title("Histogram of IV bin std err across states", size = 16)
-	plt.xlabel("Standard error of IV bin", size = 16)
-	plt.ylabel("Number of States", size =16)
-	# plt.show()
+	ax2 = fig.add_subplot(132)
+	ax2.hist(vaso_stderr, bins = 20)
+	ax2.set_title("Standard error of \n 5 vaso actions", fontsize = FONT_SIZE)
+	ax2.set_xlabel("Standard error of vaso action", fontsize = FONT_SIZE)
+	ax2.set_ylabel("Number of States", fontsize = FONT_SIZE)
+
+	ax3 = fig.add_subplot(133)
+	ax3.hist(iv_stderr, bins = 20)
+	ax3.set_title("Standard error of \n 5 IV actions", fontsize = FONT_SIZE)
+	ax3.set_xlabel("Standard error of IV action", fontsize = FONT_SIZE)
+	ax3.set_ylabel("Number of States", fontsize = FONT_SIZE)
+	
+	fig.savefig('{}{}'.format(img_path, plot_suffix), ppi=300)
 	return all_action_stderr, iv_stderr, vaso_stderr
 
 def policy_matrix(expert_filepath, irl_expert_filepath,
@@ -64,8 +97,6 @@ def policy_matrix(expert_filepath, irl_expert_filepath,
 	pi_physician_stochastic = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_star).query_Q_probs()
 	opt_policy_learned = StochasticPolicy(NUM_PURE_STATES, NUM_ACTIONS, Q_irl).query_Q_probs()
 	return pi_physician_greedy, pi_physician_stochastic, opt_policy_learned
-
-
 
 def find_consensus_low_var_low_KL_states(all_action_stderr, iv_stderr, vaso_stderr, plot_suffix, DATA_PATH, img_path, date, trial_num, iter_num, verbose=False):
 	KL_path = '{}_t{}xi{}_KL.npy'.format(DATA_PATH + date + plot_suffix, trial_num, iter_num)
@@ -201,7 +232,7 @@ def plot_feature_corr(df_train, img_path):
 
 	# Draw the heatmap with the mask and correct aspect ratio
 	sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.6, center=0,
-				square=True, linewidths=.5, cbar_kws={"shrink": .5})
+				square=True, linewidths=.5, cbar_kws={"orientation": "horizontal", "shrink": .5})
 	# plt.show()
 	print ("saving corr plot to ", img_path)
 	fig.savefig('{}feature_corr_plot'.format(img_path), ppi=300, bbox_inches='tight')
@@ -210,6 +241,11 @@ def plot_feature_corr(df_train, img_path):
 
 # Need controversial states, high KL_states
 if __name__ == '__main__':
+	FONT_SIZE = 35
+	# font = {'weight' : 'bold',
+	#         'size'   : FONT_SIZE}
+	# plt.rc('font', **font)
+
 	df_train, df_val, df_centroids, df_full = load_data()
 	df = df_train[df_centroids.columns]
 	date = '2017_12_09/'
@@ -221,18 +257,29 @@ if __name__ == '__main__':
 		raise Exception('desired date should be specified for loading saved data.')
 	else:
 		img_path = DATA_PATH + date + IMG_PATH
-	import pdb;pdb.set_trace()
 
 	phy_q_filepath = DATA_PATH + date + PHYSICIAN_Q
 	# irl_phy_q_greedy_filepath = DATA_PATH + date + IRL_PHYSICIAN_Q_GREEDY
 	irl_phy_q_stochastic_filepath = DATA_PATH + date + IRL_PHYSICIAN_Q_STOCHASTIC
 
+	# # unique actions per state
+	# plot_unique_action = 'unique_actions_per_state'
+	# controversial_states(df_train, img_path, plot_unique_action, FONT_SIZE)
+	# # action variance
+	# plot_action_variance = 'action_variance'
+	# action_variance(df_train, img_path, plot_action_variance, FONT_SIZE)
+
+
+	# # Stochasticity analysis
+	# plot_mode_consistency = 'mode_consistency'
+	# physician_action_consistency_in_two_datasets(df_train, df_val, img_path, plot_mode_consistency, FONT_SIZE)
+
+	plot_feature_corr(df_train, img_path)
+
 
 	plot_phy_greedy_id = 'greedy_physician'
 	plot_phy_stochastic_id = 'stochastic_physician'
 
-	
-	# plot_feature_corr(df_train, img_path)
 	all_action_stderr, iv_stderr, vaso_stderr = controversial_states(df_train, img_path)
 	high_kl_high_stderr_states, high_kl_high_iv_stderr_states, high_kl_high_vaso_stderr_states = \
 	find_consensus_high_var_high_KL_states(all_action_stderr, iv_stderr, vaso_stderr, plot_phy_stochastic_id, DATA_PATH, img_path, 
@@ -254,3 +301,4 @@ if __name__ == '__main__':
 	plot_expert_irl_action_distribution(high_kl_high_stderr_states, pi_physician_stochastic, opt_policy_learned, img_path, failure_states, num_states_to_plot=20)
 	plot_expert_irl_action_distribution(high_kl_high_iv_stderr_states, pi_physician_stochastic, opt_policy_learned, img_path, failure_iv_states, num_states_to_plot=20)
 	plot_expert_irl_action_distribution(high_kl_high_vaso_stderr_states, pi_physician_stochastic, opt_policy_learned, img_path, failure_vaso_states, num_states_to_plot=20)
+
