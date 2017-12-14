@@ -6,7 +6,7 @@ src/data/transition_matrix*
 src/data/backup/transition_matrix*
 large_files.txt
 -tree 7959887
-
+src/test.ipynb
 # Byte-compiled / optimized / DLL files
 **/*.pyc
 __pycache__/**/*
