@@ -1,35 +1,54 @@
-## TODOs
-- testing on gridworld. reproduce similar results as Abbeel.
-- implement policy extraction from a set of policies found in IRL (at the end of Section 3 in Abbeel (2004)
-- hyperparameter tuning (especially with C in SVM)
-- testing
+## Max Margin IRL in Sepsis
 
-## Potential TODOs
-- max margin planner (Ratliff, 2004): worth noting because we can specify some custom loss function using empirically safe actions over some prespecified states like high variance states (from sepsis.csv) Since we already have max margin learner, implementing this should not take too much time.
-- max entropy learner (Ramachandran, 2007): worth noting because this can encode uncertainty in the derived reward function (the ill-posed nature of the IRL). can also account for expert suboptimality.
+## Getting Started
 
-## Implemented
-- [ ] plots from testing on gridworld (margin/dist_mu vs. number of iterations)
-- [ ] plots from testing on gridworld (v_pi vs. number of trajectories)
-- [ ] plots from testing on sepsis (margin/dist_mu vs. number of iterations)
-- [ ] plots from testing on sepsis (v_pi vs. number of trajectories)
-- [ ] plots from varying expert policy (deterministic/stochastic) on gridworld/sepsis 
-- [x] max margin learner (Abbeel, 2004)
-- [ ] max margin planner (Ratliff, 2004) 
-- [ ] max entropy learner (Ramachandran, 2007)
+```python
+# define your experiment in main_sepsis.py
+# e.g.
 
-## examples
-### against empirical expert policy (clincian)
- <img alt='reward margin' src="/src/img/exp_margin_i15.png" width="500" height="500">
- <img alt='diff in mu' src="/src/img/exp_dist_mu_i15.png" width="500" height="500">
- <img alt='diff in v_pi' src="/src/img/exp_v_pi_i15.png" width="500" height="500">
-### against artificial expert policy (optimal mdp solution)
- <img alt='reward margin' src="/src/img/exp2_margin_i15.png" width="500" height="500">
- <img alt='diff in mu' src="/src/img/exp2_dist_mu_i15.png" width="500" height="500">
- <img alt='diff in v_pi' src="/src/img/exp2_v_pi_i15.png" width="500" height="500">
+exp1 = Experiment(
+    experiment_id =  cur_t + '_' + 'irl_greedy_physician_greedy',
+    policy_expert = em.pi_expert_phy_g,
+    save_file_name = cur_t + '_' + IRL_GREEDY_PHYSICIAN_Q_GREEDY ,
+    irl_use_stochastic_policy=False
+)
+em.set_experiment(exp1)
 
-## gettings started
-'''
-cd src/
-python main.py
-'''
+# run the following script in src/ directory
+# e.g.
+python main_sepsis.py -p -nt 5 -ni 15 -nb 2 -cm 'kp' -ns 100 -gnd
+```
+### Available arguments to the module
+```
+usage: main_sepsis.py [-h] [-gnd] [-v] [-up] [-cm {km,kp}] [-ns NUM_STATES]
+                      [-p] [-nt NUM_TRIALS] [-ni NUM_ITERATIONS] [-nb {2,4}]
+                      [-sp SVM_PENALTY] [-se SVM_EPSILON]
+                      [-en EXPERIMENT_NAME] [-hm] [-net NUM_EXP_TRAJECTORIES]
+
+process configuration vars
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -gnd, --generate_new_data
+  -v, --verbose
+  -up, --use_pca
+  -cm {km,kp}, --clustering_method {km,kp}
+                        kmeans or kprototype (cao, huang)
+  -ns NUM_STATES, --num_states NUM_STATES
+  -p, --parallelized
+  -nt NUM_TRIALS, --num_trials NUM_TRIALS
+  -ni NUM_ITERATIONS, --num_iterations NUM_ITERATIONS
+  -nb {2,4}, --num_bins {2,4}
+  -sp SVM_PENALTY, --svm_penalty SVM_PENALTY
+  -se SVM_EPSILON, --svm_epsilon SVM_EPSILON
+  -en EXPERIMENT_NAME, --experiment_name EXPERIMENT_NAME
+                        name to be displayed in tensorboard
+  -hm, --hyperplane_margin
+  -net NUM_EXP_TRAJECTORIES, --num_expert_trajectories NUM_EXP_TRAJECTORIES
+```
+
+### Note
+The module requires you have necessary data (Sepsis.csv) available in data/ directory.
+
+### Experimental features
+- K prototype clustering
