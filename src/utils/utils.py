@@ -48,9 +48,9 @@ def load_data(generate_new_data=False,
         df_cleansed_val = _load_data(VALIDATE_CLEANSED_DATA_FILEPATH)
         df_centroids_train = _load_data(TRAIN_CENTROIDS_DATA_FILEPATH)
 
-        df_cleansed_train_kp = _load_data(TRAIN_CLEANSED_KP_DATA_FILEPATH)
-        df_cleansed_val_kp = _load_data(VALIDATE_CLEANSED_KP_DATA_FILEPATH)
-        df_centroids_train_kp = _load_data(TRAIN_CENTROIDS_KP_DATA_FILEPATH)
+        #df_cleansed_train_kp = _load_data(TRAIN_CLEANSED_KP_DATA_FILEPATH)
+        #df_cleansed_val_kp = _load_data(VALIDATE_CLEANSED_KP_DATA_FILEPATH)
+        #df_centroids_train_kp = _load_data(TRAIN_CENTROIDS_KP_DATA_FILEPATH)
 
         df_cleansed_pca_train = _load_data(TRAIN_CLEANSED_PCA_DATA_FILEPATH)
         df_cleansed_pca_val = _load_data(VALIDATE_CLEANSED_PCA_DATA_FILEPATH)
@@ -97,34 +97,34 @@ def load_data(generate_new_data=False,
         df_cleansed_val.to_csv(VALIDATE_CLEANSED_DATA_FILEPATH, index=False)
 
         # k-prototyp separate x mu y from df
-        df_norm_train_kp, df_norm_val_kp = normalize_data(df_corrected_train,
-                                                          df_corrected_val,
-                                                          normalize_categorical=False)
-        assert not df_norm_train_kp.isnull().values.any(), "there's null values in df_norm_train"
-        assert not df_norm_val_kp.isnull().values.any(), "there's null values in df_norm_val"
+        #df_norm_train_kp, df_norm_val_kp = normalize_data(df_corrected_train,
+        #                                                  df_corrected_val,
+        #                                                  normalize_categorical=False)
+        #assert not df_norm_train_kp.isnull().values.any(), "there's null values in df_norm_train"
+        #assert not df_norm_val_kp.isnull().values.any(), "there's null values in df_norm_val"
 
 
-        X_train_kp, mu_train_kp, y_train_kp, X_val_kp, mu_val_kp, y_val_kp = \
-                separate_X_mu_y(df_norm_train_kp, df_norm_val_kp, ALL_VALUES)
+        #X_train_kp, mu_train_kp, y_train_kp, X_val_kp, mu_val_kp, y_val_kp = \
+        #        separate_X_mu_y(df_norm_train_kp, df_norm_val_kp, ALL_VALUES)
 
-        # k-prototype clustering (Cao) to construct discrete states
-        print('k prototype clustering')
-        X_to_cluster_train_kp = X_train_kp.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
-        X_to_cluster_val_kp = X_val_kp.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
-        # k-prototyp separate x mu y from df
-        df_centroids_train_kp, X_clustered_train_kp, X_clustered_val_kp = \
-            clustering_kp(X_to_cluster_train_kp, X_to_cluster_val_kp, num_states=num_states)
+        ## k-prototype clustering (Cao) to construct discrete states
+        #print('k prototype clustering')
+        #X_to_cluster_train_kp = X_train_kp.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        #X_to_cluster_val_kp = X_val_kp.drop(COLS_NOT_FOR_CLUSTERING, axis=1)
+        ## k-prototyp separate x mu y from df
+        #df_centroids_train_kp, X_clustered_train_kp, X_clustered_val_kp = \
+        #    clustering_kp(X_to_cluster_train_kp, X_to_cluster_val_kp, num_states=num_states)
 
-        # k-prototype stitching up
-        print('k prototype stitching up')
-        to_concat_train_kp = [X_clustered_train_kp, X_train_kp, mu_train_kp, y_train_kp]
-        to_concat_val_kp = [X_clustered_val_kp, X_val_kp, mu_val_kp, y_val_kp]
+        ## k-prototype stitching up
+        #print('k prototype stitching up')
+        #to_concat_train_kp = [X_clustered_train_kp, X_train_kp, mu_train_kp, y_train_kp]
+        #to_concat_val_kp = [X_clustered_val_kp, X_val_kp, mu_val_kp, y_val_kp]
 
-        df_cleansed_train_kp = pd.concat(to_concat_train_kp, axis=1)
-        df_cleansed_val_kp = pd.concat(to_concat_val_kp, axis=1)
-        df_centroids_train_kp.to_csv(TRAIN_CENTROIDS_KP_DATA_FILEPATH, index=False)
-        df_cleansed_train_kp.to_csv(TRAIN_CLEANSED_KP_DATA_FILEPATH, index=False)
-        df_cleansed_val_kp.to_csv(VALIDATE_CLEANSED_KP_DATA_FILEPATH, index=False)
+        #df_cleansed_train_kp = pd.concat(to_concat_train_kp, axis=1)
+        #df_cleansed_val_kp = pd.concat(to_concat_val_kp, axis=1)
+        #df_centroids_train_kp.to_csv(TRAIN_CENTROIDS_KP_DATA_FILEPATH, index=False)
+        #df_cleansed_train_kp.to_csv(TRAIN_CLEANSED_KP_DATA_FILEPATH, index=False)
+        #df_cleansed_val_kp.to_csv(VALIDATE_CLEANSED_KP_DATA_FILEPATH, index=False)
 
         # PCA
         print('applying pca')
@@ -164,13 +164,14 @@ def load_data(generate_new_data=False,
     assert not df_centroids_pca_train.isnull().values.any(), "there's null values in df_centroids_pca_train"
 
 
-    assert not df_cleansed_train_kp.isnull().values.any(), "there's null values in df_cleansed_train_kp"
-    assert not df_cleansed_val_kp.isnull().values.any(), "there's null values in df_cleansed_val_kp"
-    assert not df_centroids_train_kp.isnull().values.any(), "there's null values in df_centroids_train_kp"
+    #assert not df_cleansed_train_kp.isnull().values.any(), "there's null values in df_cleansed_train_kp"
+    #assert not df_cleansed_val_kp.isnull().values.any(), "there's null values in df_cleansed_val_kp"
+    #assert not df_centroids_train_kp.isnull().values.any(), "there's null values in df_centroids_train_kp"
+
     # we don't load full data
     # if need be, it's easy to add them
     df_full = pd.concat([df_cleansed_train, df_cleansed_val], axis=0, ignore_index=True)
-    df_full_kp = pd.concat([df_cleansed_train_kp, df_cleansed_val_kp], axis=0, ignore_index=True)
+    #df_full_kp = pd.concat([df_cleansed_train_kp, df_cleansed_val_kp], axis=0, ignore_index=True)
     df_pca_full = pd.concat([df_cleansed_pca_train, df_cleansed_pca_val], axis=0, ignore_index=True)
     data = {
         'kmeans': {
@@ -180,10 +181,10 @@ def load_data(generate_new_data=False,
             'full': df_full
            },
         'kprototype': {
-            'train': df_cleansed_train_kp,
-            'val' : df_cleansed_val_kp,
-            'centroids': df_centroids_train_kp,
-            'full': df_full_kp
+            #'train': df_cleansed_train_kp,
+            #'val' : df_cleansed_val_kp,
+            #'centroids': df_centroids_train_kp,
+            #'full': df_full_kp
         },
         'kmeans_pca': {
             'train': df_cleansed_pca_train,

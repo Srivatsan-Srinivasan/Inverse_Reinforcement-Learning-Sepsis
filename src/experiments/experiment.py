@@ -48,7 +48,6 @@ class ExperimentManager():
         # loading data
         self.data = load_data(generate_new_data=self.generate_new_data,
                               num_states=self.num_states)
-        import pdb;pdb.set_trace()
         df_label = ''
         if self.clustering_method == 'km':
             df_label += 'kmeans'
