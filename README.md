@@ -16,7 +16,7 @@ em.set_experiment(exp1)
 
 # run the following script in src/ directory
 # e.g.
-python main_sepsis.py -p -nt 5 -ni 15 -nb 2 -cm 'kp' -ns 100 -gnd
+python main_sepsis.py -p -nt 5 -ni 15 -nb 2 -cm 'km' -ns 150
 ```
 ### Available arguments to the module
 ```
